@@ -1,0 +1,10 @@
+{
+    "sunrise": "about ±30–45 min around sunrise",
+    "morning": "after sunrise till 10:59",
+    "midday": "11am to 12:59pm",
+    "afternoon": "1pm to 3:59",
+    "sunset": "about ±30–30 min around sunset",
+    "dusk": "30-90 min twilight after sunset",
+    "evening": "91min after sunset to 9:59pm",
+    "night": "10 - sunrise"
+}

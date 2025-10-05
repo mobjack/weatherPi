@@ -1,0 +1,37 @@
+# GPT Key
+OPENAI_API_KEY=your_openai_api_key_here
+
+# OpenWeatherMap API Configuration (alternative)
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+
+# Location Configuration
+LOCATION_ZIP_CODE=your_zip_code_here
+LOCATION_NAME="Your City, State"
+
+# Weather Icon Configuration
+USE_TEXT_ICONS=false
+USE_IMAGE_ICONS=true
+
+# Update Timing Configuration (in milliseconds)
+# Time display updates every minute
+TIME_UPDATE_INTERVAL=60000
+
+# Date and day of week updates every hour
+DATE_UPDATE_INTERVAL=3600000
+
+# Weather data updates every 30 minutes
+WEATHER_UPDATE_INTERVAL=1800000
+
+# Background updates every 30 minutes (when time period changes)
+BACKGROUND_UPDATE_INTERVAL=1800000
+
+# Motion Detection and Display Timer Configuration
+# Motion sensor GPIO pin (BCM numbering)
+MOTION_SENSOR_PIN=18
+
+# Display timer settings (in seconds)
+DISPLAY_TIMEOUT=60
+DISPLAY_DIMMING_TIMEOUT=60
+
+# Test mode for development without Raspberry Pi hardware
+MOTION_TEST_MODE=true
