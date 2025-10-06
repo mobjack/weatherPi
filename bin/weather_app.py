@@ -331,7 +331,7 @@ class WeatherApp(QMainWindow):
             result = self.wallpaper_generator.generate_current_weather_wallpaper(
                 style="photoreal-soft",  # Use photoreal-soft style for better quality
                 location=self.location,  # Use zip code from environment
-                target_size=(800, 600),  # Match the window size
+                target_size=(1000, 600),  # Match the window size
                 try_resize=True,
                 save_prompt=False
             )
@@ -384,7 +384,8 @@ class WeatherApp(QMainWindow):
     def setup_window(self):
         """Configure the main window"""
         self.setWindowTitle("Weather App")
-        self.setGeometry(100, 100, 800, 600)
+        # Increased width for 5-column layout
+        self.setGeometry(100, 100, 1000, 600)
         # Background will be set by set_random_background()
 
     def create_widgets(self):
@@ -411,13 +412,20 @@ class WeatherApp(QMainWindow):
         self.create_location_section(main_layout)
 
     def create_top_row(self, parent_layout):
-        """Create the top row with time, weather, and date"""
+        """Create the top row with 5 columns: time, sunrise/sunset, current weather, high/low, date"""
         top_frame = QFrame()
         top_frame.setStyleSheet(
             "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px;")
         top_layout = QHBoxLayout(top_frame)
+        top_layout.setSpacing(10)
 
-        # Time (left)
+        # Column 1: Current Time
+        time_frame = QFrame()
+        time_frame.setStyleSheet(
+            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+        time_layout = QVBoxLayout(time_frame)
+        time_layout.setAlignment(Qt.AlignCenter)
+
         self.time_label = QLabel("10:23")
         self.time_label.setStyleSheet(
             "color: white; font-size: 48px; font-weight: bold;")
@@ -427,52 +435,118 @@ class WeatherApp(QMainWindow):
             time_font.setPointSize(48)
             time_font.setBold(True)
             self.time_label.setFont(time_font)
-        top_layout.addWidget(self.time_label)
+        self.time_label.setAlignment(Qt.AlignCenter)
+        time_layout.addWidget(self.time_label)
+        top_layout.addWidget(time_frame)
 
-        # Spacer
-        top_layout.addStretch()
+        # Column 2: Sunrise/Sunset Times
+        sun_frame = QFrame()
+        sun_frame.setStyleSheet(
+            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+        sun_layout = QVBoxLayout(sun_frame)
+        sun_layout.setAlignment(Qt.AlignCenter)
+        sun_layout.setSpacing(5)
 
-        # Current weather (center)
+        # Sunrise
+        self.sunrise_label = QLabel("↑06:30")
+        self.sunrise_label.setStyleSheet(
+            "color: white; font-size: 16px;")
+        # Apply Inter font to sunrise label
+        if hasattr(self, 'inter_font'):
+            sunrise_font = QFont(self.inter_font)
+            sunrise_font.setPointSize(16)
+            self.sunrise_label.setFont(sunrise_font)
+        self.sunrise_label.setAlignment(Qt.AlignCenter)
+        sun_layout.addWidget(self.sunrise_label)
+
+        # Sunset
+        self.sunset_label = QLabel("↓18:30")
+        self.sunset_label.setStyleSheet(
+            "color: white; font-size: 16px;")
+        # Apply Inter font to sunset label
+        if hasattr(self, 'inter_font'):
+            sunset_font = QFont(self.inter_font)
+            sunset_font.setPointSize(16)
+            self.sunset_label.setFont(sunset_font)
+        self.sunset_label.setAlignment(Qt.AlignCenter)
+        sun_layout.addWidget(self.sunset_label)
+        top_layout.addWidget(sun_frame)
+
+        # Column 3: Current Weather (Icon + Temperature)
         weather_frame = QFrame()
         weather_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px;")
+            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
         weather_layout = QVBoxLayout(weather_frame)
         weather_layout.setAlignment(Qt.AlignCenter)
+        weather_layout.setSpacing(8)
 
         # Weather icon
-        # Default icon, will be updated with real data
         self.weather_icon = QLabel("☀️")
         self.weather_icon.setStyleSheet("color: yellow; font-size: 32px;")
         self.weather_icon.setAlignment(Qt.AlignCenter)
         weather_layout.addWidget(self.weather_icon)
 
-        # Temperature
+        # Current Temperature
         self.temp_label = QLabel("55°")
         self.temp_label.setStyleSheet(
-            "color: white; font-size: 20px; font-weight: bold;")
+            "color: white; font-size: 24px; font-weight: bold;")
         # Apply Inter font to temperature label
         if hasattr(self, 'inter_font'):
             temp_font = QFont(self.inter_font)
-            temp_font.setPointSize(20)
+            temp_font.setPointSize(24)
             temp_font.setBold(True)
             self.temp_label.setFont(temp_font)
         self.temp_label.setAlignment(Qt.AlignCenter)
         weather_layout.addWidget(self.temp_label)
-
         top_layout.addWidget(weather_frame)
 
-        # Spacer
-        top_layout.addStretch()
+        # Column 4: High/Low Temperatures
+        high_low_frame = QFrame()
+        high_low_frame.setStyleSheet(
+            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+        high_low_layout = QVBoxLayout(high_low_frame)
+        high_low_layout.setAlignment(Qt.AlignCenter)
+        high_low_layout.setSpacing(5)
 
-        # Date (right)
+        # High temperature
+        self.high_temp_label = QLabel("H:78")
+        self.high_temp_label.setStyleSheet(
+            "color: white; font-size: 18px; font-weight: bold;")
+        # Apply Inter font to high temp label
+        if hasattr(self, 'inter_font'):
+            high_font = QFont(self.inter_font)
+            high_font.setPointSize(18)
+            high_font.setBold(True)
+            self.high_temp_label.setFont(high_font)
+        self.high_temp_label.setAlignment(Qt.AlignCenter)
+        high_low_layout.addWidget(self.high_temp_label)
+
+        # Low temperature
+        self.low_temp_label = QLabel("L:65")
+        self.low_temp_label.setStyleSheet(
+            "color: white; font-size: 18px; font-weight: bold;")
+        # Apply Inter font to low temp label
+        if hasattr(self, 'inter_font'):
+            low_font = QFont(self.inter_font)
+            low_font.setPointSize(18)
+            low_font.setBold(True)
+            self.low_temp_label.setFont(low_font)
+        self.low_temp_label.setAlignment(Qt.AlignCenter)
+        high_low_layout.addWidget(self.low_temp_label)
+        top_layout.addWidget(high_low_frame)
+
+        # Column 5: Date and Day
         date_frame = QFrame()
         date_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px;")
+            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
         date_layout = QVBoxLayout(date_frame)
-        date_layout.setAlignment(Qt.AlignRight)
+        date_layout.setAlignment(Qt.AlignCenter)
+        date_layout.setSpacing(8)
 
         self.day_label = QLabel("Tuesday")
-        self.day_label.setStyleSheet("color: white; font-size: 18px;")
+        self.day_label.setStyleSheet(
+            "color: white; font-size: 18px;")
+        self.day_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to day label
         if hasattr(self, 'inter_font'):
             day_font = QFont(self.inter_font)
@@ -481,14 +555,15 @@ class WeatherApp(QMainWindow):
         date_layout.addWidget(self.day_label)
 
         self.date_label = QLabel("April 23")
-        self.date_label.setStyleSheet("color: white; font-size: 18px;")
+        self.date_label.setStyleSheet(
+            "color: white; font-size: 18px;")
+        self.date_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to date label
         if hasattr(self, 'inter_font'):
             date_font = QFont(self.inter_font)
             date_font.setPointSize(18)
             self.date_label.setFont(date_font)
         date_layout.addWidget(self.date_label)
-
         top_layout.addWidget(date_frame)
 
         parent_layout.addWidget(top_frame)
@@ -522,11 +597,11 @@ class WeatherApp(QMainWindow):
         # Create 5 forecast day widgets
         self.forecast_days = []
         day_data = [
-            ("Wed", "☀️", "72°"),
-            ("Thu", "☁️", "65°"),
-            ("Fri", "🌧️", "63°"),
-            ("Sat", "☁️", "63°"),
-            ("Sun", "☁️", "70°")
+            ("Wed", "☀️", "H:78 L:65"),
+            ("Thu", "☁️", "H:70 L:60"),
+            ("Fri", "🌧️", "H:68 L:58"),
+            ("Sat", "☁️", "H:68 L:58"),
+            ("Sun", "☁️", "H:75 L:65")
         ]
 
         for day_name, icon, temp in day_data:
@@ -810,9 +885,21 @@ class WeatherApp(QMainWindow):
     def update_current_weather_display(self, weather_data: Dict):
         """Update the current weather display with real data"""
         try:
-            # Update temperature
+            # Update current temperature
             temp = weather_data.get('temperature', 72)
             self.temp_label.setText(f"{temp}°")
+
+            # Update high/low temperatures (separate labels now)
+            high_temp = weather_data.get('high_temp', 78)
+            low_temp = weather_data.get('low_temp', 65)
+            self.high_temp_label.setText(f"H:{high_temp}")
+            self.low_temp_label.setText(f"L:{low_temp}")
+
+            # Update sunrise/sunset times (separate labels now)
+            sunrise = weather_data.get('sunrise', '06:30')
+            sunset = weather_data.get('sunset', '18:30')
+            self.sunrise_label.setText(f"↑{sunrise}")
+            self.sunset_label.setText(f"↓{sunset}")
 
             # Get icon path for image-based icons
             icon_path = weather_data.get('icon_path')
@@ -932,9 +1019,9 @@ class WeatherApp(QMainWindow):
                         self._set_text_or_emoji_icon(
                             day_data, forecast_widget['icon'])
 
-                    # Update temperature
-                    temp = day_data.get('temperature', 72)
-                    forecast_widget['temp'].setText(f"{temp}°")
+                    # Update temperature (now shows high/low format)
+                    temp = day_data.get('temperature', "H:72 L:65")
+                    forecast_widget['temp'].setText(temp)
 
             print(f"Updated forecast for {len(forecast_data)} days")
 

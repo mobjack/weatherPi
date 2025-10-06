@@ -12,7 +12,7 @@ It combines **time of day** from [`conf/day_night.json`](./conf/day_night.json) 
   - Weather examples: `CLEAR`, `PARTLY_CLOUDY`, `RAIN`, `SNOW`, `THUNDERSTORM`, etc.:contentReference[oaicite:1]{index=1}
 - **Style packs**: Choose from multiple art directions (e.g., *minimal-gradient*, *flat-illustration*, *neon-glow*).
 - **Prompt saving**: Each generated image has its prompt stored in `_prompts/` for audit/re-use.
-- **Auto-resize/crop**: By default, images are center-cropped to `480x320` for small displays.
+- **Auto-resize/crop**: By default, images are center-cropped to `800x600` to match the main display.
 - **CLI options**: Control style, size, backoff timing, output directories, etc.
 
 ---

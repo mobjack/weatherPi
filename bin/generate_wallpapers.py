@@ -32,9 +32,9 @@ except ImportError:
     print("⚠️  Weather service not available - will use fallback conditions")
 
 
-# Optional: resize to your small display (e.g., 480x320)
+# Optional: resize to your display (e.g., 800x600)
 TRY_RESIZE = True
-TARGET_SIZE = (480, 320)  # (width, height)
+TARGET_SIZE = (1000, 600)  # (width, height)
 
 if TRY_RESIZE:
     try:
@@ -306,7 +306,7 @@ class WallpaperGenerator:
             style: Style pack name (e.g., 'minimal-gradient', 'photoreal-soft')
             epoch_time: Unix timestamp for time of day determination
             weather_condition: Weather condition key (e.g., 'CLEAR', 'RAIN')
-            target_size: Target size for resizing (width, height). Defaults to (480, 320) if None.
+            target_size: Target size for resizing (width, height). Defaults to (1000, 600) if None.
             try_resize: Whether to resize images to target size. Defaults to True if None.
             model: OpenAI model to use for image generation. Defaults to "dall-e-3" if None.
             save_prompt: Whether to save the prompt to a file. Defaults to False if None.
@@ -316,7 +316,7 @@ class WallpaperGenerator:
         """
         # Set default values for optional parameters
         if target_size is None:
-            target_size = (480, 320)
+            target_size = (1000, 600)
         if try_resize is None:
             try_resize = True
         if model is None:
@@ -410,7 +410,7 @@ class WallpaperGenerator:
         Args:
             style: Style pack name (e.g., 'minimal-gradient', 'photoreal-soft')
             location: Location to get weather for
-            target_size: Target size for resizing (width, height). Defaults to (480, 320) if None.
+            target_size: Target size for resizing (width, height). Defaults to (1000, 600) if None.
             try_resize: Whether to resize images to target size. Defaults to True if None.
             model: OpenAI model to use for image generation. Defaults to "dall-e-3" if None.
             save_prompt: Whether to save the prompt to a file. Defaults to False if None.
@@ -607,7 +607,7 @@ def example_class_usage():
         result = generator.generate_current_weather_wallpaper(
             style="random",  # Use random style selection for variety
             location="95037",  # Use zip code for better geocoding
-            target_size=(800, 600),  # Match your weather app size
+            target_size=(1000, 600),  # Match your weather app size
             try_resize=True,
             save_prompt=True
         )
@@ -629,7 +629,7 @@ def example_class_usage():
             style="random",  # Try "random" for random style selection
             epoch_time=current_epoch,
             weather_condition="CLEAR",
-            target_size=(480, 320),
+            target_size=(1000, 600),
             try_resize=True,
             save_prompt=True
         )
@@ -669,7 +669,7 @@ def main():
     parser.add_argument("--no-resize", action="store_true",
                         help="Do not downscale/crop to target size")
     parser.add_argument("--size", default=None,
-                        help="Target WxH, e.g., 480x320")
+                        help="Target WxH, e.g., 800x600")
     parser.add_argument("--backoff", type=float, default=2.0,
                         help="Seconds between requests")
     parser.add_argument("--force", action="store_true",
@@ -686,7 +686,7 @@ def main():
             w, h = args.size.lower().split("x")
             TARGET_SIZE = (int(w), int(h))
         except Exception:
-            print("Invalid --size format; expected WxH like 480x320")
+            print("Invalid --size format; expected WxH like 800x600")
 
     if args.list_styles:
         print("Available style packs:")

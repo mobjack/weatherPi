@@ -1,0 +1,45 @@
+# WeatherPi - Python Requirements
+# Core dependencies for the weather display application
+
+# GUI Framework
+PyQt5>=5.15.0
+
+# HTTP requests for weather API
+requests>=2.28.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# OpenAI API for wallpaper generation
+openai>=1.0.0
+
+# Image processing for wallpaper resizing
+Pillow>=9.0.0
+
+# Raspberry Pi GPIO control (optional - only needed on Raspberry Pi)
+#RPi.GPIO>=0.7.1; platform_machine == "armv7l" or platform_machine == "aarch64"
+
+# Data processing and type hints (usually included with Python 3.8+)
+typing-extensions>=4.0.0
+
+# Standard library modules (included with Python, listed for reference):
+# - os
+# - sys
+# - json
+# - time
+# - base64
+# - argparse
+# - random
+# - pathlib
+# - datetime
+# - dataclasses
+# - threading
+# - subprocess
+# - enum
+# - collections
+# - tempfile
+# - shutil
+# - importlib
+# - unittest.mock
+# - io
+# - numpy (optional, for image validation in generate_wallpapers.py)

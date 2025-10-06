@@ -204,11 +204,34 @@ class WeatherService:
         """Parse current weather data from API response"""
         try:
             condition = data.get('weather', [{}])[0].get('main', 'CLEAR')
+            main_data = data.get('main', {})
+            sys_data = data.get('sys', {})
+
+            # Parse sunrise and sunset times
+            sunrise_timestamp = sys_data.get('sunrise', 0)
+            sunset_timestamp = sys_data.get('sunset', 0)
+
+            sunrise_time = datetime.fromtimestamp(sunrise_timestamp).strftime(
+                '%H:%M') if sunrise_timestamp else '06:30'
+            sunset_time = datetime.fromtimestamp(sunset_timestamp).strftime(
+                '%H:%M') if sunset_timestamp else '18:30'
+
+            # Get today's high and low temperatures
+            # Note: Current weather API doesn't provide daily highs/lows, so we'll use temp_min/temp_max if available
+            # or estimate based on current temp
+            current_temp = int(main_data.get('temp', 72))
+            temp_min = int(main_data.get('temp_min', current_temp - 5))
+            temp_max = int(main_data.get('temp_max', current_temp + 5))
+
             return {
-                'temperature': int(data.get('main', {}).get('temp', 72)),
+                'temperature': current_temp,
+                'high_temp': temp_max,
+                'low_temp': temp_min,
                 'condition': condition,
-                'humidity': data.get('main', {}).get('humidity', 50),
+                'humidity': main_data.get('humidity', 50),
                 'wind_speed': data.get('wind', {}).get('speed', 5),
+                'sunrise': sunrise_time,
+                'sunset': sunset_time,
                 'icon': self._get_weather_icon(condition),
                 'text_icon': self._get_weather_text_icon(condition),
                 'icon_path': self._get_weather_icon_path(condition),
@@ -225,31 +248,58 @@ class WeatherService:
             daily_forecasts = data.get('list', [])
             current_date = datetime.now().date()
 
-            # Group forecasts by day and take the first forecast for each day
+            # Group forecasts by day to calculate daily highs and lows
             daily_data = {}
             for forecast in daily_forecasts:
                 date = datetime.fromtimestamp(forecast['dt']).date()
                 # Skip today's date - we only want future days for the forecast
-                if date > current_date and date not in daily_data:
-                    daily_data[date] = forecast
+                if date > current_date:
+                    if date not in daily_data:
+                        daily_data[date] = {
+                            'forecasts': [],
+                            'high_temp': float('-inf'),
+                            'low_temp': float('inf'),
+                            'conditions': []
+                        }
+
+                    # Add this forecast to the day's data
+                    temp = forecast.get('main', {}).get('temp', 72)
+                    daily_data[date]['forecasts'].append(forecast)
+                    daily_data[date]['high_temp'] = max(
+                        daily_data[date]['high_temp'], temp)
+                    daily_data[date]['low_temp'] = min(
+                        daily_data[date]['low_temp'], temp)
+
+                    # Collect conditions for the day (use the most common one)
+                    condition = forecast.get('weather', [{}])[
+                        0].get('main', 'CLEAR')
+                    daily_data[date]['conditions'].append(condition)
 
             # Convert to list and limit to requested days
             sorted_dates = sorted(daily_data.keys())[:days]
 
             for i, date in enumerate(sorted_dates):
-                forecast = daily_data[date]
+                day_info = daily_data[date]
                 day_name = date.strftime('%a')
-                condition = forecast.get('weather', [{}])[
-                    0].get('main', 'CLEAR')
+
+                # Use the most common condition for the day
+                from collections import Counter
+                most_common_condition = Counter(
+                    day_info['conditions']).most_common(1)[0][0]
+
+                # Get the first forecast for icon and description
+                first_forecast = day_info['forecasts'][0]
 
                 forecasts.append({
                     'day': day_name,
-                    'temperature': int(forecast.get('main', {}).get('temp', 72)),
-                    'condition': condition,
-                    'icon': self._get_weather_icon(condition),
-                    'text_icon': self._get_weather_text_icon(condition),
-                    'icon_path': self._get_weather_icon_path(condition),
-                    'description': forecast.get('weather', [{}])[0].get('description', 'Clear')
+                    'temperature': f"H:{int(day_info['high_temp'])} L:{int(day_info['low_temp'])}",
+                    'high_temp': int(day_info['high_temp']),
+                    'low_temp': int(day_info['low_temp']),
+                    'condition': most_common_condition,
+                    'icon': self._get_weather_icon(most_common_condition),
+                    'text_icon': self._get_weather_text_icon(most_common_condition),
+                    'icon_path': self._get_weather_icon_path(most_common_condition),
+                    'description': first_forecast.get('weather', [{}])[0].get('description', 'Clear')
                 })
 
             return forecasts
@@ -338,9 +388,13 @@ class WeatherService:
         """Return fallback weather data when API fails"""
         return {
             'temperature': 72,
+            'high_temp': 78,
+            'low_temp': 65,
             'condition': 'CLEAR',
             'humidity': 50,
             'wind_speed': 5,
+            'sunrise': '06:30',
+            'sunset': '18:30',
             'icon': '☀️',
             'text_icon': 'SUN',
             'icon_path': self._get_weather_icon_path('CLEAR'),
@@ -426,19 +480,22 @@ class WeatherService:
             days.append(day_name)
 
         conditions = ['CLEAR', 'CLOUDY', 'RAIN', 'CLOUDY', 'CLOUDY']
-        temps = [72, 65, 63, 63, 70]
+        high_temps = [78, 70, 68, 68, 75]
+        low_temps = [65, 60, 58, 58, 65]
 
         return [
             {
                 'day': day,
-                'temperature': temp,
+                'temperature': f"H:{high_temp} L:{low_temp}",
+                'high_temp': high_temp,
+                'low_temp': low_temp,
                 'condition': condition,
                 'icon': self._get_weather_icon(condition),
                 'text_icon': self._get_weather_text_icon(condition),
                 'icon_path': self._get_weather_icon_path(condition),
                 'description': 'Clear' if condition == 'CLEAR' else 'Cloudy' if condition == 'CLOUDY' else 'Rainy'
             }
-            for day, temp, condition in zip(days, temps, conditions)
+            for day, high_temp, low_temp, condition in zip(days, high_temps, low_temps, conditions)
         ]
 
     def _get_fallback_hourly_forecast(self) -> List[Dict]:
