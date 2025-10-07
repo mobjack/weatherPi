@@ -216,12 +216,12 @@ class WeatherService:
             sunset_time = datetime.fromtimestamp(sunset_timestamp).strftime(
                 '%H:%M') if sunset_timestamp else '18:30'
 
-            # Get today's high and low temperatures
-            # Note: Current weather API doesn't provide daily highs/lows, so we'll use temp_min/temp_max if available
-            # or estimate based on current temp
+            # Get current temperature
             current_temp = int(main_data.get('temp', 72))
-            temp_min = int(main_data.get('temp_min', current_temp - 5))
-            temp_max = int(main_data.get('temp_max', current_temp + 5))
+
+            # Determine today's high/low using forecast data with a daily cache fallback
+            temp_min, temp_max = self._get_today_high_low_cached(default_low=current_temp - 5,
+                                                                 default_high=current_temp + 5)
 
             return {
                 'temperature': current_temp,
@@ -532,6 +532,101 @@ class WeatherService:
             })
 
         return hourly_data
+
+    # ------------------------
+    # High/Low caching helpers
+    # ------------------------
+    def _today_cache_path(self) -> str:
+        """Return the OS temp file path for storing today's high/low."""
+        try:
+            tmp_dir = os.getenv('TMPDIR') or '/tmp'
+        except Exception:
+            tmp_dir = '/tmp'
+        return os.path.join(tmp_dir, 'weatherPi_today_highlow.json')
+
+    def _read_today_cache(self) -> Optional[Dict]:
+        """Read the cached high/low values if present and valid."""
+        try:
+            cache_path = self._today_cache_path()
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"⚠️  Failed reading high/low cache: {e}")
+        return None
+
+    def _write_today_cache(self, payload: Dict) -> None:
+        """Write the cached high/low values."""
+        try:
+            cache_path = self._today_cache_path()
+            with open(cache_path, 'w') as f:
+                json.dump(payload, f)
+        except Exception as e:
+            print(f"⚠️  Failed writing high/low cache: {e}")
+
+    def _get_today_high_low_cached(self, default_low: int, default_high: int) -> Tuple[int, int]:
+        """
+        Compute today's high/low from the 3-hour forecast, cached per-day.
+
+        Returns (low, high).
+        """
+        try:
+            # Try cache first
+            cached = self._read_today_cache()
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            if cached and cached.get('date') == today_str and 'low' in cached and 'high' in cached:
+                return int(cached['low']), int(cached['high'])
+
+            # Need to compute from forecast for the configured location
+            # We need a location string; replicate how public methods accept it via env/config
+            location = os.getenv('LOCATION_ZIP_CODE') or os.getenv(
+                'LOCATION_NAME') or 'Morgan Hill, CA'
+            try:
+                if not self._is_coordinate(location):
+                    location = self._geocode_location(location)
+                lat, lng = location.split(',')
+            except Exception:
+                # If geocoding fails, we still attempt forecast with default Morgan Hill
+                lat, lng = '37.1305', '-121.6544'
+
+            url = f"{self.base_url}/forecast"
+            params = {
+                'lat': float(lat.strip()),
+                'lon': float(lng.strip()),
+                'appid': self.api_key,
+                'units': 'imperial'
+            }
+
+            response = self.session.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            low = float('inf')
+            high = float('-inf')
+            current_date = datetime.now().date()
+            for forecast in data.get('list', []):
+                dt = datetime.fromtimestamp(forecast.get('dt'))
+                if dt.date() == current_date:
+                    temp = forecast.get('main', {}).get('temp')
+                    if temp is not None:
+                        low = min(low, temp)
+                        high = max(high, temp)
+
+            if low == float('inf') or high == float('-inf'):
+                # Fallback to provided defaults
+                low, high = default_low, default_high
+
+            low = int(round(low))
+            high = int(round(high))
+
+            # Write cache
+            self._write_today_cache(
+                {'date': today_str, 'low': low, 'high': high})
+            return low, high
+
+        except Exception as e:
+            print(f"⚠️  Could not compute today's high/low from forecast: {e}")
+            return int(default_low), int(default_high)
 
 
 # Test the weather service
