@@ -610,12 +610,14 @@ class WeatherApp(QMainWindow):
 
         # Forecast title
         forecast_title = QLabel("5-Day Forecast")
+        # Adjust font size based on window size - much smaller for compact displays
+        forecast_title_font_size = max(10, self.window_width // 80)
         forecast_title.setStyleSheet(
-            "color: white; font-size: 14px; font-weight: bold;")
+            f"color: white; font-size: {forecast_title_font_size}px; font-weight: bold;")
         # Apply Inter font to forecast title
         if hasattr(self, 'inter_font'):
             title_font = QFont(self.inter_font)
-            title_font.setPointSize(14)
+            title_font.setPointSize(forecast_title_font_size)
             title_font.setBold(True)
             forecast_title.setFont(title_font)
         forecast_layout.addWidget(forecast_title)
@@ -625,7 +627,9 @@ class WeatherApp(QMainWindow):
         days_frame.setStyleSheet(
             "background-color: rgba(26, 26, 46, 0.1); border-radius: 5px;")
         days_layout = QHBoxLayout(days_frame)
-        days_layout.setSpacing(20)
+        # Adjust spacing based on window width - much smaller for compact displays
+        forecast_spacing = max(5, self.window_width // 50)
+        days_layout.setSpacing(forecast_spacing)
 
         # Create 5 forecast day widgets
         self.forecast_days = []
@@ -641,36 +645,56 @@ class WeatherApp(QMainWindow):
             day_frame = QFrame()
             day_frame.setStyleSheet(
                 "background-color: rgba(26, 26, 46, 0.1); border-radius: 5px;")
-            day_layout = QVBoxLayout(day_frame)
+            # Use horizontal layout instead of vertical
+            day_layout = QHBoxLayout(day_frame)
             day_layout.setAlignment(Qt.AlignCenter)
+            day_layout.setSpacing(8)
+
+            # Left side: Day name and temperature
+            left_info_layout = QVBoxLayout()
+            left_info_layout.setAlignment(Qt.AlignCenter)
+            left_info_layout.setSpacing(2)
 
             # Day name
             day_label = QLabel(day_name)
-            day_label.setStyleSheet("color: white; font-size: 10px;")
+            # Adjust font size based on window size - much smaller for compact displays
+            day_name_font_size = max(8, self.window_width // 100)
+            day_label.setStyleSheet(
+                f"color: white; font-size: {day_name_font_size}px; font-weight: bold;")
             # Apply Inter font to day name
             if hasattr(self, 'inter_font'):
                 day_name_font = QFont(self.inter_font)
-                day_name_font.setPointSize(10)
+                day_name_font.setPointSize(day_name_font_size)
+                day_name_font.setBold(True)
                 day_label.setFont(day_name_font)
             day_label.setAlignment(Qt.AlignCenter)
-            day_layout.addWidget(day_label)
-
-            # Weather icon
-            weather_icon = QLabel(icon)
-            weather_icon.setStyleSheet("color: lightblue; font-size: 16px;")
-            weather_icon.setAlignment(Qt.AlignCenter)
-            day_layout.addWidget(weather_icon)
+            left_info_layout.addWidget(day_label)
 
             # Temperature
             temp_label = QLabel(temp)
-            temp_label.setStyleSheet("color: white; font-size: 10px;")
+            # Adjust font size based on window size - much smaller for compact displays
+            forecast_temp_font_size = max(8, self.window_width // 100)
+            temp_label.setStyleSheet(
+                f"color: white; font-size: {forecast_temp_font_size}px;")
             # Apply Inter font to forecast temperature
             if hasattr(self, 'inter_font'):
                 forecast_temp_font = QFont(self.inter_font)
-                forecast_temp_font.setPointSize(10)
+                forecast_temp_font.setPointSize(forecast_temp_font_size)
                 temp_label.setFont(forecast_temp_font)
             temp_label.setAlignment(Qt.AlignCenter)
-            day_layout.addWidget(temp_label)
+            left_info_layout.addWidget(temp_label)
+
+            # Add left info to main layout
+            day_layout.addLayout(left_info_layout)
+
+            # Right side: Weather icon (bigger now)
+            weather_icon = QLabel(icon)
+            # Increase icon size since we have more space now
+            forecast_icon_font_size = max(18, self.window_width // 40)
+            weather_icon.setStyleSheet(
+                f"color: lightblue; font-size: {forecast_icon_font_size}px;")
+            weather_icon.setAlignment(Qt.AlignCenter)
+            day_layout.addWidget(weather_icon)
 
             days_layout.addWidget(day_frame)
 
@@ -693,12 +717,14 @@ class WeatherApp(QMainWindow):
 
         # Graph title
         graph_title = QLabel("Temperature Trend")
+        # Adjust font size based on window size - much smaller for compact displays
+        graph_title_font_size = max(10, self.window_width // 80)
         graph_title.setStyleSheet(
-            "color: white; font-size: 14px; font-weight: bold;")
+            f"color: white; font-size: {graph_title_font_size}px; font-weight: bold;")
         # Apply Inter font to graph title
         if hasattr(self, 'inter_font'):
             graph_title_font = QFont(self.inter_font)
-            graph_title_font.setPointSize(14)
+            graph_title_font.setPointSize(graph_title_font_size)
             graph_title_font.setBold(True)
             graph_title.setFont(graph_title_font)
         graph_layout.addWidget(graph_title)
@@ -720,11 +746,14 @@ class WeatherApp(QMainWindow):
         location_layout = QHBoxLayout(location_frame)
 
         self.location_label = QLabel(self.location_name)
-        self.location_label.setStyleSheet("color: white; font-size: 14px;")
+        # Adjust font size based on window size - much smaller for compact displays
+        location_font_size = max(10, self.window_width // 80)
+        self.location_label.setStyleSheet(
+            f"color: white; font-size: {location_font_size}px;")
         # Apply Inter font to location label
         if hasattr(self, 'inter_font'):
             location_font = QFont(self.inter_font)
-            location_font.setPointSize(14)
+            location_font.setPointSize(location_font_size)
             self.location_label.setFont(location_font)
         self.location_label.setAlignment(Qt.AlignCenter)
         location_layout.addWidget(self.location_label)
@@ -1026,9 +1055,11 @@ class WeatherApp(QMainWindow):
                             # Load and display the icon image
                             pixmap = QPixmap(icon_path)
                             if not pixmap.isNull():
-                                # Scale the icon to appropriate size (32x32 for forecast)
+                                # Scale the icon to larger size since we have more space now
+                                forecast_icon_size = max(
+                                    32, self.window_width // 25)
                                 scaled_pixmap = pixmap.scaled(
-                                    32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                                    forecast_icon_size, forecast_icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                                 forecast_widget['icon'].setPixmap(
                                     scaled_pixmap)
                                 forecast_widget['icon'].setText(
