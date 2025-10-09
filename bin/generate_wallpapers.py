@@ -12,15 +12,29 @@ from typing import Dict, Tuple, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
-# NEW: auto-load environment variables from .env
-from dotenv import load_dotenv
-load_dotenv("conf/weather.conf")  # Load weather.conf file first
-API_KEY = os.getenv("OPENAI_API_KEY")
+# Load configuration from weather.conf file
+
+
+def load_config_value(key, default=None):
+    """Load a configuration value from weather.conf file"""
+    config_path = "conf/weather.conf"
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith(f'{key}='):
+                    value = line.split('=', 1)[1].strip()
+                    return value
+    return default
+
+
+# Load API key from config
+API_KEY = load_config_value("OPENAI_API_KEY")
 if not API_KEY:
-    print("❌ ERROR: OPENAI_API_KEY is not set in env.", file=sys.stderr)
+    print("❌ ERROR: OPENAI_API_KEY not found in weather.conf", file=sys.stderr)
     sys.exit(1)
 else:
-    print("Loaded ChatGPT API Key")
+    print("✅ Loaded ChatGPT API Key from weather.conf")
 
 # Import the weather service for real weather data
 try:
@@ -44,15 +58,15 @@ if TRY_RESIZE:
         TRY_RESIZE = False
 
 # --- Configure these ---
-MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "dall-e-3")
-DEFAULT_OUTPUT_DIR = Path(os.environ.get(
+MODEL = load_config_value("OPENAI_IMAGE_MODEL", "dall-e-3")
+DEFAULT_OUTPUT_DIR = Path(load_config_value(
     "OUTPUT_DIR", "images/generated_wallpapers"))
 OUT_EXT = ".png"  # png recommended for UI overlays later
 
 # Where your JSONs live. Adjust if running outside this environment.
-DEFAULT_DAY_NIGHT_JSON = os.environ.get(
+DEFAULT_DAY_NIGHT_JSON = load_config_value(
     "DAY_NIGHT_JSON", "conf/day_night.json")
-DEFAULT_CONDITIONS_JSON = os.environ.get(
+DEFAULT_CONDITIONS_JSON = load_config_value(
     "CONDITIONS_JSON", "conf/gcp_conditions.json")
 
 # Mapping from OpenWeatherMap conditions to Google Weather API conditions
@@ -99,9 +113,8 @@ STYLE_PACKS = {
     "isometric": "Create a sky view and and make a simple isometric composition with minimal geometry and a single focal element hinting at the weather. Keep edges clean and uncluttered."
 }
 
-# API key must be exported before running:
-#   export OPENAI_API_KEY="sk-..."
-client = OpenAI()
+# Initialize OpenAI client with API key from config
+client = OpenAI(api_key=API_KEY)
 
 
 @dataclass
@@ -134,7 +147,7 @@ class WallpaperGenerator:
             conditions_json: Path to conf/gcp_conditions.json file
             output_dir: Directory to save generated wallpapers
         """
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=API_KEY)
         self.day_night_json = day_night_json
         self.conditions_json = conditions_json
         self.output_dir = output_dir
@@ -660,7 +673,7 @@ def main():
                         help="Path to conf/gcp_conditions.json")
     parser.add_argument(
         "--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Output directory")
-    parser.add_argument("--style", default=os.environ.get("STYLE_PACK",
+    parser.add_argument("--style", default=load_config_value("STYLE_PACK",
                         "minimal-gradient"), help="Style pack name (or 'random' for random selection)")
     parser.add_argument("--all-styles", action="store_true",
                         help="Generate every style pack")
