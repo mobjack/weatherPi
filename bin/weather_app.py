@@ -93,24 +93,33 @@ class WeatherApp(QMainWindow):
     def collect_wallpaper_images(self):
         """Collect all available wallpaper images from the generated_wallpapers folder"""
         wallpaper_images = []
-        wallpaper_base_path = "/Users/ericparker/Documents/weatherPi/images/generated_wallpapers/photoreal-soft"
+        wallpaper_base_path = "/Users/ericparker/Documents/weatherPi/images/generated_wallpapers"
 
         if os.path.exists(wallpaper_base_path):
-            # Get all time-of-day folders
-            time_folders = [f for f in os.listdir(wallpaper_base_path)
-                            if os.path.isdir(os.path.join(wallpaper_base_path, f)) and not f.startswith('_')]
+            # Get all style folders (not just photoreal-soft)
+            style_folders = [f for f in os.listdir(wallpaper_base_path)
+                             if os.path.isdir(os.path.join(wallpaper_base_path, f)) and not f.startswith('_')]
 
-            for time_folder in time_folders:
-                time_path = os.path.join(wallpaper_base_path, time_folder)
-                # Get all PNG files in each time folder
-                png_files = [f for f in os.listdir(
-                    time_path) if f.endswith('.png')]
+            for style_folder in style_folders:
+                style_path = os.path.join(wallpaper_base_path, style_folder)
+                print(f"🔍 Scanning style folder: {style_folder}")
 
-                for png_file in png_files:
-                    full_path = os.path.join(time_path, png_file)
-                    wallpaper_images.append(full_path)
+                # Get all time-of-day folders within each style
+                time_folders = [f for f in os.listdir(style_path)
+                                if os.path.isdir(os.path.join(style_path, f)) and not f.startswith('_')]
 
-        print(f"Found {len(wallpaper_images)} wallpaper images")
+                for time_folder in time_folders:
+                    time_path = os.path.join(style_path, time_folder)
+                    # Get all PNG files in each time folder
+                    png_files = [f for f in os.listdir(
+                        time_path) if f.endswith('.png')]
+
+                    for png_file in png_files:
+                        full_path = os.path.join(time_path, png_file)
+                        wallpaper_images.append(full_path)
+
+        print(
+            f"Found {len(wallpaper_images)} wallpaper images across all styles")
         return wallpaper_images
 
     def setup_fonts(self):
@@ -339,7 +348,7 @@ class WeatherApp(QMainWindow):
         try:
             print("🎨 Generating current weather wallpaper...")
             result = self.wallpaper_generator.generate_current_weather_wallpaper(
-                style="photoreal-soft",  # Use photoreal-soft style for better quality
+                style="random",  # Randomly select from available styles
                 location=self.location,  # Use zip code from environment
                 # Use configurable window size
                 target_size=(self.window_width, self.window_height),
@@ -449,8 +458,8 @@ class WeatherApp(QMainWindow):
         time_layout.setAlignment(Qt.AlignCenter)
 
         self.time_label = QLabel("10:23")
-        # Adjust font size based on window size - much smaller for compact displays
-        time_font_size = max(16, self.window_width // 40)
+        # Increase font size to better fill the available space
+        time_font_size = max(24, self.window_width // 25)
         self.time_label.setStyleSheet(
             f"color: white; font-size: {time_font_size}px; font-weight: bold;")
         # Apply Inter font to time label
@@ -577,24 +586,30 @@ class WeatherApp(QMainWindow):
         date_layout.setSpacing(8)
 
         self.day_label = QLabel("Tuesday")
+        # Increase font size for day of week to better fill available space
+        day_font_size = max(14, self.window_width // 50)
         self.day_label.setStyleSheet(
-            f"color: white; font-size: {medium_font_size}px;")
+            f"color: white; font-size: {day_font_size}px; font-weight: bold;")
         self.day_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to day label
         if hasattr(self, 'inter_font'):
             day_font = QFont(self.inter_font)
-            day_font.setPointSize(medium_font_size)
+            day_font.setPointSize(day_font_size)
+            day_font.setBold(True)
             self.day_label.setFont(day_font)
         date_layout.addWidget(self.day_label)
 
         self.date_label = QLabel("April 23")
+        # Increase font size for date to better fill available space
+        date_font_size = max(14, self.window_width // 50)
         self.date_label.setStyleSheet(
-            f"color: white; font-size: {medium_font_size}px;")
+            f"color: white; font-size: {date_font_size}px; font-weight: bold;")
         self.date_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to date label
         if hasattr(self, 'inter_font'):
             date_font = QFont(self.inter_font)
-            date_font.setPointSize(medium_font_size)
+            date_font.setPointSize(date_font_size)
+            date_font.setBold(True)
             self.date_label.setFont(date_font)
         date_layout.addWidget(self.date_label)
         top_layout.addWidget(date_frame)
