@@ -607,7 +607,7 @@ def example_class_usage():
         result = generator.generate_current_weather_wallpaper(
             style="random",  # Use random style selection for variety
             location="95037",  # Use zip code for better geocoding
-            target_size=(1000, 600),  # Match your weather app size
+            target_size=TARGET_SIZE,  # Use configurable target size
             try_resize=True,
             save_prompt=True
         )
@@ -629,7 +629,7 @@ def example_class_usage():
             style="random",  # Try "random" for random style selection
             epoch_time=current_epoch,
             weather_condition="CLEAR",
-            target_size=(1000, 600),
+            target_size=TARGET_SIZE,  # Use configurable target size
             try_resize=True,
             save_prompt=True
         )

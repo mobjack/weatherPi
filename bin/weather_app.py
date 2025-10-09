@@ -152,7 +152,9 @@ class WeatherApp(QMainWindow):
                 'TIME_UPDATE_INTERVAL': 60000,      # 1 minute
                 'DATE_UPDATE_INTERVAL': 3600000,    # 1 hour
                 'WEATHER_UPDATE_INTERVAL': 1800000,  # 30 minutes
-                'BACKGROUND_UPDATE_INTERVAL': 1800000  # 30 minutes
+                'BACKGROUND_UPDATE_INTERVAL': 1800000,  # 30 minutes
+                'WINDOW_WIDTH': 1000,               # Window width
+                'WINDOW_HEIGHT': 600                # Window height
             }
 
             # Try to load from weather.conf file
@@ -170,7 +172,10 @@ class WeatherApp(QMainWindow):
                             if key in default_config:
                                 try:
                                     self.__dict__[key.lower()] = int(value)
-                                    print(f"✅ Loaded {key}: {value}ms")
+                                    if key in ['WINDOW_WIDTH', 'WINDOW_HEIGHT']:
+                                        print(f"✅ Loaded {key}: {value}px")
+                                    else:
+                                        print(f"✅ Loaded {key}: {value}ms")
                                 except ValueError:
                                     print(
                                         f"⚠️  Invalid value for {key}: {value}, using default")
@@ -187,7 +192,10 @@ class WeatherApp(QMainWindow):
             for key, default_value in default_config.items():
                 if not hasattr(self, key.lower()):
                     self.__dict__[key.lower()] = default_value
-                    print(f"📋 Using default {key}: {default_value}ms")
+                    if key in ['WINDOW_WIDTH', 'WINDOW_HEIGHT']:
+                        print(f"📋 Using default {key}: {default_value}px")
+                    else:
+                        print(f"📋 Using default {key}: {default_value}ms")
 
         except Exception as e:
             print(f"⚠️  Error loading timing config: {e}, using defaults")
@@ -196,6 +204,8 @@ class WeatherApp(QMainWindow):
             self.date_update_interval = 3600000
             self.weather_update_interval = 1800000
             self.background_update_interval = 1800000
+            self.window_width = 1000
+            self.window_height = 600
 
     def load_motion_config(self):
         """Load motion detection configuration from weather.conf file"""
@@ -331,7 +341,8 @@ class WeatherApp(QMainWindow):
             result = self.wallpaper_generator.generate_current_weather_wallpaper(
                 style="photoreal-soft",  # Use photoreal-soft style for better quality
                 location=self.location,  # Use zip code from environment
-                target_size=(1000, 600),  # Match the window size
+                # Use configurable window size
+                target_size=(self.window_width, self.window_height),
                 try_resize=True,
                 save_prompt=False
             )
@@ -384,8 +395,10 @@ class WeatherApp(QMainWindow):
     def setup_window(self):
         """Configure the main window"""
         self.setWindowTitle("Weather App")
-        # Increased width for 5-column layout
-        self.setGeometry(100, 100, 1000, 600)
+        # Use configurable window dimensions
+        self.setGeometry(100, 100, self.window_width, self.window_height)
+        # Force the window to stay at the configured size
+        self.setFixedSize(self.window_width, self.window_height)
         # Background will be set by set_random_background()
 
     def create_widgets(self):
@@ -396,8 +409,13 @@ class WeatherApp(QMainWindow):
         self.setCentralWidget(central_widget)
 
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(20)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        # Adjust spacing and margins based on window size - much smaller for compact displays
+        # Minimum 5px, scale with window
+        spacing = max(5, self.window_height // 50)
+        # Minimum 5px, scale with window
+        margin = max(5, self.window_width // 100)
+        main_layout.setSpacing(spacing)
+        main_layout.setContentsMargins(margin, margin, margin, margin)
 
         # Top row: Time, Current Weather, Date
         self.create_top_row(main_layout)
@@ -417,22 +435,28 @@ class WeatherApp(QMainWindow):
         top_frame.setStyleSheet(
             "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px;")
         top_layout = QHBoxLayout(top_frame)
-        top_layout.setSpacing(10)
+        # Adjust spacing based on window width - much smaller for compact displays
+        top_spacing = max(2, self.window_width // 200)
+        top_layout.setSpacing(top_spacing)
 
         # Column 1: Current Time
         time_frame = QFrame()
+        # Adjust padding based on window size - much smaller for compact displays
+        padding = max(4, self.window_width // 120)
         time_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+            f"background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: {padding}px;")
         time_layout = QVBoxLayout(time_frame)
         time_layout.setAlignment(Qt.AlignCenter)
 
         self.time_label = QLabel("10:23")
+        # Adjust font size based on window size - much smaller for compact displays
+        time_font_size = max(16, self.window_width // 40)
         self.time_label.setStyleSheet(
-            "color: white; font-size: 48px; font-weight: bold;")
+            f"color: white; font-size: {time_font_size}px; font-weight: bold;")
         # Apply Inter font to time label
         if hasattr(self, 'inter_font'):
             time_font = QFont(self.inter_font)
-            time_font.setPointSize(48)
+            time_font.setPointSize(time_font_size)
             time_font.setBold(True)
             self.time_label.setFont(time_font)
         self.time_label.setAlignment(Qt.AlignCenter)
@@ -442,19 +466,21 @@ class WeatherApp(QMainWindow):
         # Column 2: Sunrise/Sunset Times
         sun_frame = QFrame()
         sun_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+            f"background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: {padding}px;")
         sun_layout = QVBoxLayout(sun_frame)
         sun_layout.setAlignment(Qt.AlignCenter)
         sun_layout.setSpacing(5)
 
         # Sunrise
         self.sunrise_label = QLabel("↑06:30")
+        # Adjust font size based on window size - much smaller for compact displays
+        small_font_size = max(10, self.window_width // 80)
         self.sunrise_label.setStyleSheet(
-            "color: white; font-size: 16px;")
+            f"color: white; font-size: {small_font_size}px;")
         # Apply Inter font to sunrise label
         if hasattr(self, 'inter_font'):
             sunrise_font = QFont(self.inter_font)
-            sunrise_font.setPointSize(16)
+            sunrise_font.setPointSize(small_font_size)
             self.sunrise_label.setFont(sunrise_font)
         self.sunrise_label.setAlignment(Qt.AlignCenter)
         sun_layout.addWidget(self.sunrise_label)
@@ -462,11 +488,11 @@ class WeatherApp(QMainWindow):
         # Sunset
         self.sunset_label = QLabel("↓18:30")
         self.sunset_label.setStyleSheet(
-            "color: white; font-size: 16px;")
+            f"color: white; font-size: {small_font_size}px;")
         # Apply Inter font to sunset label
         if hasattr(self, 'inter_font'):
             sunset_font = QFont(self.inter_font)
-            sunset_font.setPointSize(16)
+            sunset_font.setPointSize(small_font_size)
             self.sunset_label.setFont(sunset_font)
         self.sunset_label.setAlignment(Qt.AlignCenter)
         sun_layout.addWidget(self.sunset_label)
@@ -475,25 +501,30 @@ class WeatherApp(QMainWindow):
         # Column 3: Current Weather (Icon + Temperature)
         weather_frame = QFrame()
         weather_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+            f"background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: {padding}px;")
         weather_layout = QVBoxLayout(weather_frame)
         weather_layout.setAlignment(Qt.AlignCenter)
         weather_layout.setSpacing(8)
 
         # Weather icon
         self.weather_icon = QLabel("☀️")
-        self.weather_icon.setStyleSheet("color: yellow; font-size: 32px;")
+        # Adjust icon size based on window size - much smaller for compact displays
+        icon_font_size = max(16, self.window_width // 50)
+        self.weather_icon.setStyleSheet(
+            f"color: yellow; font-size: {icon_font_size}px;")
         self.weather_icon.setAlignment(Qt.AlignCenter)
         weather_layout.addWidget(self.weather_icon)
 
         # Current Temperature
         self.temp_label = QLabel("55°")
+        # Adjust font size based on window size - much smaller for compact displays
+        temp_font_size = max(12, self.window_width // 60)
         self.temp_label.setStyleSheet(
-            "color: white; font-size: 24px; font-weight: bold;")
+            f"color: white; font-size: {temp_font_size}px; font-weight: bold;")
         # Apply Inter font to temperature label
         if hasattr(self, 'inter_font'):
             temp_font = QFont(self.inter_font)
-            temp_font.setPointSize(24)
+            temp_font.setPointSize(temp_font_size)
             temp_font.setBold(True)
             self.temp_label.setFont(temp_font)
         self.temp_label.setAlignment(Qt.AlignCenter)
@@ -503,19 +534,21 @@ class WeatherApp(QMainWindow):
         # Column 4: High/Low Temperatures
         high_low_frame = QFrame()
         high_low_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+            f"background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: {padding}px;")
         high_low_layout = QVBoxLayout(high_low_frame)
         high_low_layout.setAlignment(Qt.AlignCenter)
         high_low_layout.setSpacing(5)
 
         # High temperature
         self.high_temp_label = QLabel("H:78")
+        # Adjust font size based on window size - much smaller for compact displays
+        medium_font_size = max(10, self.window_width // 70)
         self.high_temp_label.setStyleSheet(
-            "color: white; font-size: 18px; font-weight: bold;")
+            f"color: white; font-size: {medium_font_size}px; font-weight: bold;")
         # Apply Inter font to high temp label
         if hasattr(self, 'inter_font'):
             high_font = QFont(self.inter_font)
-            high_font.setPointSize(18)
+            high_font.setPointSize(medium_font_size)
             high_font.setBold(True)
             self.high_temp_label.setFont(high_font)
         self.high_temp_label.setAlignment(Qt.AlignCenter)
@@ -524,11 +557,11 @@ class WeatherApp(QMainWindow):
         # Low temperature
         self.low_temp_label = QLabel("L:65")
         self.low_temp_label.setStyleSheet(
-            "color: white; font-size: 18px; font-weight: bold;")
+            f"color: white; font-size: {medium_font_size}px; font-weight: bold;")
         # Apply Inter font to low temp label
         if hasattr(self, 'inter_font'):
             low_font = QFont(self.inter_font)
-            low_font.setPointSize(18)
+            low_font.setPointSize(medium_font_size)
             low_font.setBold(True)
             self.low_temp_label.setFont(low_font)
         self.low_temp_label.setAlignment(Qt.AlignCenter)
@@ -538,30 +571,30 @@ class WeatherApp(QMainWindow):
         # Column 5: Date and Day
         date_frame = QFrame()
         date_frame.setStyleSheet(
-            "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: 15px;")
+            f"background-color: rgba(26, 26, 46, 0.2); border-radius: 10px; padding: {padding}px;")
         date_layout = QVBoxLayout(date_frame)
         date_layout.setAlignment(Qt.AlignCenter)
         date_layout.setSpacing(8)
 
         self.day_label = QLabel("Tuesday")
         self.day_label.setStyleSheet(
-            "color: white; font-size: 18px;")
+            f"color: white; font-size: {medium_font_size}px;")
         self.day_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to day label
         if hasattr(self, 'inter_font'):
             day_font = QFont(self.inter_font)
-            day_font.setPointSize(18)
+            day_font.setPointSize(medium_font_size)
             self.day_label.setFont(day_font)
         date_layout.addWidget(self.day_label)
 
         self.date_label = QLabel("April 23")
         self.date_label.setStyleSheet(
-            "color: white; font-size: 18px;")
+            f"color: white; font-size: {medium_font_size}px;")
         self.date_label.setAlignment(Qt.AlignCenter)
         # Apply Inter font to date label
         if hasattr(self, 'inter_font'):
             date_font = QFont(self.inter_font)
-            date_font.setPointSize(18)
+            date_font.setPointSize(medium_font_size)
             self.date_label.setFont(date_font)
         date_layout.addWidget(self.date_label)
         top_layout.addWidget(date_frame)
@@ -672,7 +705,9 @@ class WeatherApp(QMainWindow):
 
         # Temperature graph
         self.temp_graph = TemperatureGraph()
-        self.temp_graph.setMinimumHeight(200)
+        # Set minimum height based on window size (about 1/3 of window height)
+        min_height = max(100, self.window_height // 3)
+        self.temp_graph.setMinimumHeight(min_height)
         graph_layout.addWidget(self.temp_graph)
 
         parent_layout.addWidget(graph_frame)
