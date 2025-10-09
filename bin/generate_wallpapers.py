@@ -20,27 +20,30 @@ def load_config_value(key, default=None):
     # Try to find the config file in multiple locations
     possible_config_paths = [
         "conf/weather.conf",  # Relative to current directory
-        os.path.join(os.path.dirname(__file__), "..", "conf", "weather.conf"),  # Relative to script location
-        os.path.join(os.getcwd(), "conf", "weather.conf"),  # Relative to working directory
+        os.path.join(os.path.dirname(__file__), "..", "conf",
+                     "weather.conf"),  # Relative to script location
+        # Relative to working directory
+        os.path.join(os.getcwd(), "conf", "weather.conf"),
     ]
-    
+
     # Also try to get BASE_DIR from environment or a simple config check
     base_dir = os.getenv('WEATHERPI_BASE_DIR')
     if base_dir:
-        possible_config_paths.insert(0, os.path.join(base_dir, "conf", "weather.conf"))
-    
+        possible_config_paths.insert(
+            0, os.path.join(base_dir, "conf", "weather.conf"))
+
     config_path = None
     for path in possible_config_paths:
         if os.path.exists(path):
             config_path = path
             break
-    
+
     if not config_path:
         print(f"⚠️  Warning: Could not find weather.conf in any of these locations:")
         for path in possible_config_paths:
             print(f"    - {path}")
         return default
-    
+
     try:
         with open(config_path, 'r') as f:
             for line in f:
@@ -50,11 +53,12 @@ def load_config_value(key, default=None):
                     # Handle BASE_DIR specially - resolve relative paths
                     if key == 'BASE_DIR' and value and not os.path.isabs(value):
                         # If BASE_DIR is relative, make it relative to the config file location
-                        value = os.path.abspath(os.path.join(os.path.dirname(config_path), value))
+                        value = os.path.abspath(os.path.join(
+                            os.path.dirname(config_path), value))
                     return value
     except Exception as e:
         print(f"⚠️  Warning: Error reading config file {config_path}: {e}")
-    
+
     return default
 
 
@@ -62,33 +66,36 @@ def resolve_config_path(path, base_dir=None):
     """Resolve a path relative to the base directory or config file location"""
     if not path:
         return path
-    
+
     # If it's already absolute, return as-is
     if os.path.isabs(path):
         return path
-    
+
     # Get base directory
     if not base_dir:
         base_dir = load_config_value("BASE_DIR")
-    
+
     # If no base_dir configured, try to find it from config file location
     if not base_dir:
         # Find the config file to determine base directory
         possible_config_paths = [
             "conf/weather.conf",
-            os.path.join(os.path.dirname(__file__), "..", "conf", "weather.conf"),
+            os.path.join(os.path.dirname(__file__),
+                         "..", "conf", "weather.conf"),
             os.path.join(os.getcwd(), "conf", "weather.conf"),
         ]
-        
+
         base_dir = os.getenv('WEATHERPI_BASE_DIR')
         if base_dir:
-            possible_config_paths.insert(0, os.path.join(base_dir, "conf", "weather.conf"))
-        
+            possible_config_paths.insert(
+                0, os.path.join(base_dir, "conf", "weather.conf"))
+
         for config_path in possible_config_paths:
             if os.path.exists(config_path):
-                base_dir = os.path.dirname(os.path.dirname(config_path))  # Go up from conf/ to project root
+                # Go up from conf/ to project root
+                base_dir = os.path.dirname(os.path.dirname(config_path))
                 break
-    
+
     if base_dir:
         return os.path.join(base_dir, path)
     else:
