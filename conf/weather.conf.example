@@ -35,3 +35,8 @@ DISPLAY_DIMMING_TIMEOUT=60
 
 # Test mode for development without Raspberry Pi hardware
 MOTION_TEST_MODE=true
+
+# Window Configuration
+# Window dimensions (width x height)
+WINDOW_WIDTH=1000
+WINDOW_HEIGHT=600
