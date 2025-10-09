@@ -141,6 +141,7 @@ images/generated_wallpapers/
 # Configuration files that might contain sensitive data
 # Ignore actual config files with sensitive data
 conf/weather.conf
+feedback/
 # But allow example config files and non-sensitive JSON configs
 !conf/*.example
 !conf/day_night.json

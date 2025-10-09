@@ -6,7 +6,7 @@ import os
 import random
 import time
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QFrame)
+                             QHBoxLayout, QLabel, QFrame, QPushButton)
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont
 import datetime
@@ -401,6 +401,9 @@ class WeatherApp(QMainWindow):
             palette.setBrush(QPalette.Window, QBrush(scaled_pixmap))
             self.setPalette(palette)
 
+            # Track the current background path
+            self.current_background_path = image_path
+
     def setup_window(self):
         """Configure the main window"""
         self.setWindowTitle("Weather App")
@@ -754,12 +757,13 @@ class WeatherApp(QMainWindow):
         parent_layout.addWidget(graph_frame)
 
     def create_location_section(self, parent_layout):
-        """Create the location display section"""
+        """Create the location display section with BG Scrap button"""
         location_frame = QFrame()
         location_frame.setStyleSheet(
             "background-color: rgba(26, 26, 46, 0.2); border-radius: 10px;")
         location_layout = QHBoxLayout(location_frame)
 
+        # Location label (left side)
         self.location_label = QLabel(self.location_name)
         # Adjust font size based on window size - much smaller for compact displays
         location_font_size = max(10, self.window_width // 80)
@@ -772,6 +776,47 @@ class WeatherApp(QMainWindow):
             self.location_label.setFont(location_font)
         self.location_label.setAlignment(Qt.AlignCenter)
         location_layout.addWidget(self.location_label)
+
+        # Add stretch to push button to the right
+        location_layout.addStretch()
+
+        # BG Scrap button (right side)
+        self.bg_scrap_button = QPushButton("BG Scrap")
+        # Style the button with modern, compact design
+        button_font_size = max(9, self.window_width // 120)
+        self.bg_scrap_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(255, 100, 100, 0.85);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                padding: 6px 12px;
+                font-size: {button_font_size}px;
+                font-weight: 600;
+                min-width: 60px;
+                min-height: 24px;
+                max-height: 28px;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(255, 120, 120, 0.95);
+                transform: scale(1.02);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(255, 80, 80, 1.0);
+                transform: scale(0.98);
+            }}
+        """)
+
+        # Apply Inter font to button
+        if hasattr(self, 'inter_font'):
+            button_font = QFont(self.inter_font)
+            button_font.setPointSize(button_font_size)
+            button_font.setBold(True)
+            self.bg_scrap_button.setFont(button_font)
+
+        # Connect button click to handler
+        self.bg_scrap_button.clicked.connect(self.on_bg_scrap_clicked)
+        location_layout.addWidget(self.bg_scrap_button)
 
         parent_layout.addWidget(location_frame)
 
@@ -931,6 +976,143 @@ class WeatherApp(QMainWindow):
 
         except Exception as e:
             print(f"❌ Error updating background: {e}")
+
+    def on_bg_scrap_clicked(self):
+        """Handle BG Scrap button click - generate new random background"""
+        print("🎨 BG Scrap button clicked - generating new random background...")
+
+        # Log user feedback that they don't like the current image
+        self.log_user_feedback_dislike()
+
+        # Disable button temporarily to prevent multiple clicks
+        self.bg_scrap_button.setEnabled(False)
+        self.bg_scrap_button.setText("Generating...")
+
+        try:
+            # Store current background path for potential removal
+            current_background = getattr(self, 'current_background_path', None)
+
+            # Generate new random background
+            new_background = self.generate_random_background()
+
+            if new_background and os.path.exists(new_background):
+                # Set new background
+                self.set_background_image(new_background)
+                self.current_background_path = new_background
+
+                # Remove old background if it exists and is different
+                if current_background and current_background != new_background and os.path.exists(current_background):
+                    try:
+                        os.remove(current_background)
+                        print(
+                            f"🗑️  Removed old background: {os.path.basename(current_background)}")
+                    except Exception as e:
+                        print(f"⚠️  Could not remove old background: {e}")
+
+                print(
+                    f"✅ New background set: {os.path.basename(new_background)}")
+            else:
+                print("⚠️  Failed to generate new background")
+
+        except Exception as e:
+            print(f"❌ Error generating new background: {e}")
+        finally:
+            # Re-enable button
+            self.bg_scrap_button.setEnabled(True)
+            self.bg_scrap_button.setText("BG Scrap")
+
+    def generate_random_background(self):
+        """Generate a completely random background (not based on current weather)"""
+        if not self.wallpaper_generator:
+            print("⚠️  WallpaperGenerator not available, using existing wallpapers")
+            if self.wallpaper_images:
+                return random.choice(self.wallpaper_images)
+            return None
+
+        try:
+            print("🎨 Generating completely random background...")
+
+            # Load conditions map to get random weather condition
+            conditions_map = self.wallpaper_generator._load_maps()[1]
+            random_condition = random.choice(list(conditions_map.keys()))
+
+            # Use current time for time of day
+            current_epoch = time.time()
+
+            # Generate with random style and random conditions
+            result = self.wallpaper_generator.generate_wallpaper(
+                style="random",  # Randomly select from available styles
+                epoch_time=current_epoch,
+                weather_condition=random_condition,
+                target_size=(self.window_width, self.window_height),
+                try_resize=True,
+                save_prompt=False
+            )
+
+            print(f"✅ Generated random background: {result['filename']}")
+            print(f"   Style: random, Condition: {random_condition}")
+            print(f"   Path: {result['path']}")
+            return result['path']
+
+        except Exception as e:
+            print(f"❌ Error generating random background: {e}")
+            # Fallback to existing wallpapers
+            if self.wallpaper_images:
+                return random.choice(self.wallpaper_images)
+            return None
+
+    def log_user_feedback_dislike(self):
+        """Log user feedback that they don't like the current background image"""
+        try:
+            current_background = getattr(self, 'current_background_path', None)
+            if current_background:
+                # Create feedback directory if it doesn't exist
+                feedback_dir = "feedback"
+                os.makedirs(feedback_dir, exist_ok=True)
+
+                # Create feedback file with timestamp and image info
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                feedback_file = os.path.join(
+                    feedback_dir, f"disliked_images_{timestamp}.json")
+
+                # Load existing feedback or create new
+                feedback_data = []
+                if os.path.exists(feedback_file):
+                    try:
+                        with open(feedback_file, 'r') as f:
+                            feedback_data = json.load(f)
+                    except:
+                        feedback_data = []
+
+                # Add current feedback
+                feedback_entry = {
+                    "timestamp": timestamp,
+                    "image_path": current_background,
+                    "image_filename": os.path.basename(current_background),
+                    "action": "disliked",
+                    "user_action": "bg_scrap_clicked"
+                }
+                feedback_data.append(feedback_entry)
+
+                # Save feedback
+                with open(feedback_file, 'w') as f:
+                    json.dump(feedback_data, f, indent=2)
+
+                print(
+                    f"📝 Logged user dislike for: {os.path.basename(current_background)}")
+                print(f"   Feedback saved to: {feedback_file}")
+
+                # TODO: In the future, this feedback could be used to:
+                # 1. Train a local model to avoid similar images
+                # 2. Send feedback to OpenAI for model improvement
+                # 3. Adjust generation parameters based on user preferences
+                # 4. Create a "blacklist" of image characteristics to avoid
+
+            else:
+                print("⚠️  No current background to log feedback for")
+
+        except Exception as e:
+            print(f"⚠️  Error logging user feedback: {e}")
 
     def load_weather_data(self):
         """Load current weather and forecast data from the weather service"""
