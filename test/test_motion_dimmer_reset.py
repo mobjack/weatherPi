@@ -8,14 +8,14 @@ This script specifically tests:
 3. Motion brings the screen back on when dimmed or off
 """
 
-from motion_detection_service import MotionDetectionService, DisplayState
+from bin.motion_detection_service import MotionDetectionService, DisplayState
 import os
 import sys
 import time
 import threading
 
-# Add the bin directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bin'))
+# Add parent directory to path so we can import from bin package
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
 def load_config_value(key, default=None):

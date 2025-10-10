@@ -9,8 +9,8 @@ This script tests the motion sensor functionality and verifies that:
 4. Display state transitions work properly
 """
 
-from display_controller import DisplayController, DisplayState as ControllerDisplayState
-from motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
+from bin.display_controller import DisplayController, DisplayState as ControllerDisplayState
+from bin.motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
 import os
 import sys
 import time
