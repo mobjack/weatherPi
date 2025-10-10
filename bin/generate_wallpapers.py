@@ -113,12 +113,19 @@ else:
 
 # Import the weather service for real weather data
 try:
+    # Try relative import first (when used as module)
     from .weather_service_openweather import WeatherService
     WEATHER_SERVICE_AVAILABLE = True
     print("✅ Weather service available")
 except ImportError:
-    WEATHER_SERVICE_AVAILABLE = False
-    print("⚠️  Weather service not available - will use fallback conditions")
+    try:
+        # Try absolute import (when run directly or from different directory)
+        from weather_service_openweather import WeatherService
+        WEATHER_SERVICE_AVAILABLE = True
+        print("✅ Weather service available")
+    except ImportError:
+        WEATHER_SERVICE_AVAILABLE = False
+        print("⚠️  Weather service not available - will use fallback conditions")
 
 
 # Optional: resize to your display (e.g., 800x600)

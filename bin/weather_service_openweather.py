@@ -5,8 +5,36 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv('conf/weather.conf')
+# Load environment variables from config file
+
+
+def find_config_file():
+    """Find the weather.conf file in multiple locations"""
+    possible_paths = [
+        "conf/weather.conf",  # Relative to current directory
+        os.path.join(os.path.dirname(__file__), "..", "conf",
+                     "weather.conf"),  # Relative to script location
+        # Relative to working directory
+        os.path.join(os.getcwd(), "conf", "weather.conf"),
+    ]
+
+    # Also try to get BASE_DIR from environment
+    base_dir = os.getenv('WEATHERPI_BASE_DIR')
+    if base_dir:
+        possible_paths.insert(0, os.path.join(
+            base_dir, "conf", "weather.conf"))
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+config_path = find_config_file()
+if config_path:
+    load_dotenv(config_path)
+else:
+    print("⚠️  Warning: Could not find weather.conf file")
 
 
 class WeatherService:
