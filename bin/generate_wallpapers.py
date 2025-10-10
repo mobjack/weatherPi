@@ -231,7 +231,14 @@ class WallpaperGenerator:
         self.client = OpenAI(api_key=API_KEY)
         self.day_night_json = day_night_json or DEFAULT_DAY_NIGHT_JSON
         self.conditions_json = conditions_json or DEFAULT_CONDITIONS_JSON
-        self.output_dir = output_dir or str(DEFAULT_OUTPUT_DIR)
+        # Resolve output directory using BASE_DIR when generator is created
+        if output_dir:
+            self.output_dir = resolve_config_path(output_dir)
+        else:
+            # Get output dir from config and resolve it
+            config_output_dir = load_config_value(
+                "OUTPUT_DIR", "images/generated_wallpapers")
+            self.output_dir = resolve_config_path(config_output_dir)
         self.day_night_map = None
         self.conditions_map = None
 
@@ -282,16 +289,23 @@ class WallpaperGenerator:
         else:  # Night
             return "night"
 
-    def get_current_weather_condition(self, location: str = "95037") -> str:
+    def get_current_weather_condition(self, location: str = None) -> str:
         """
         Get current weather condition from OpenWeatherMap API.
 
         Args:
-            location: Location to get weather for
+            location: Location to get weather for (defaults to config)
 
         Returns:
             Google Weather API condition string (e.g., 'CLEAR', 'CLOUDY')
         """
+        if not location:
+            location = load_config_value("LOCATION_ZIP_CODE")
+            if not location:
+                print(
+                    "❌ ERROR: LOCATION_ZIP_CODE not found in weather.conf", file=sys.stderr)
+                sys.exit(1)
+
         if not self.weather_service:
             print("⚠️  Weather service not available, using CLEAR condition")
             return "CLEAR"
@@ -492,7 +506,7 @@ class WallpaperGenerator:
 
     def generate_current_weather_wallpaper(self,
                                            style: str = "photoreal-soft",
-                                           location: str = "95037",
+                                           location: str = None,
                                            target_size: Optional[Tuple[int,
                                                                        int]] = None,
                                            try_resize: Optional[bool] = None,
@@ -503,7 +517,7 @@ class WallpaperGenerator:
 
         Args:
             style: Style pack name (e.g., 'minimal-gradient', 'photoreal-soft')
-            location: Location to get weather for
+            location: Location to get weather for (defaults to config)
             target_size: Target size for resizing (width, height). Defaults to (1000, 600) if None.
             try_resize: Whether to resize images to target size. Defaults to True if None.
             model: OpenAI model to use for image generation. Defaults to "dall-e-3" if None.
@@ -512,6 +526,13 @@ class WallpaperGenerator:
         Returns:
             Dictionary with 'filename' and 'path' keys
         """
+        if not location:
+            location = load_config_value("LOCATION_ZIP_CODE")
+            if not location:
+                print(
+                    "❌ ERROR: LOCATION_ZIP_CODE not found in weather.conf", file=sys.stderr)
+                sys.exit(1)
+
         # Get current time and weather
         current_epoch = self.get_current_time_epoch()
         current_weather_condition = self.get_current_weather_condition(
@@ -696,7 +717,7 @@ def example_class_usage():
         print("\n🌤️  Example 1: Current Weather Wallpaper")
         result = generator.generate_current_weather_wallpaper(
             style="random",  # Use random style selection for variety
-            location="95037",  # Use zip code for better geocoding
+            # location will default to config file value
             target_size=TARGET_SIZE,  # Use configurable target size
             try_resize=True,
             save_prompt=True
