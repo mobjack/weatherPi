@@ -707,7 +707,7 @@ def example_class_usage():
         print(f"   Path: {result['path']}")
 
     except Exception as e:
-        print(f"❌ Error generating current weather wallpaper: {e}")
+        print(f"❌ Error in generate_wallpapers.py weather wallpaper: {e}")
 
     # Example 2: Generate a wallpaper for specific conditions (legacy method)
     try:

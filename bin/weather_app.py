@@ -362,7 +362,7 @@ class WeatherApp(QMainWindow):
             return result['path']
 
         except Exception as e:
-            print(f"❌ Error generating current weather wallpaper: {e}")
+            print(f"❌ Error in weather_app generating weather wallpaper: {e}")
             return None
 
     def set_random_background(self):
