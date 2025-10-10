@@ -26,12 +26,7 @@ def load_config_value(key, default=None):
         os.path.join(os.getcwd(), "conf", "weather.conf"),
     ]
 
-    # Also try to get BASE_DIR from environment or a simple config check
-    base_dir = os.getenv('WEATHERPI_BASE_DIR')
-    if base_dir:
-        possible_config_paths.insert(
-            0, os.path.join(base_dir, "conf", "weather.conf"))
-
+    # Get BASE_DIR from config
     config_path = None
     for path in possible_config_paths:
         if os.path.exists(path):
@@ -85,10 +80,14 @@ def resolve_config_path(path, base_dir=None):
             os.path.join(os.getcwd(), "conf", "weather.conf"),
         ]
 
-        base_dir = os.getenv('WEATHERPI_BASE_DIR')
         if base_dir:
             possible_config_paths.insert(
                 0, os.path.join(base_dir, "conf", "weather.conf"))
+        else:
+            print("⚠️  Warning: Could not find weather.conf in any of these locations:")
+            for path in possible_config_paths:
+                print(f"    - {path}")
+            return None
 
         for config_path in possible_config_paths:
             if os.path.exists(config_path):
