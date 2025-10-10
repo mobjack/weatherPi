@@ -1,2 +1,1 @@
-# WeatherPi supporting modules
-# This package contains the core classes and services for the weather application
+# This file makes the bin directory a Python package
