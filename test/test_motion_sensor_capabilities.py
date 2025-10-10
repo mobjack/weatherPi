@@ -308,6 +308,7 @@ class MotionSensorTester:
 
             # Trigger motion - this should call the callback which resets the dimming timer
             print("   Triggering motion from dimmed state...")
+            print(f"   Callback set: {self.motion_service.on_motion_detected is not None}")
             self.motion_service.trigger_motion()
             time.sleep(2)
 
