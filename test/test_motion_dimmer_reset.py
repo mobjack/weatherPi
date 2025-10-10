@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+# turn off formatting and sorting
+# fmt: off
+# isort: skip_file
 """
 Simple test to verify motion resets dimmer countdown and activates display.
 
@@ -8,7 +10,6 @@ This script specifically tests:
 3. Motion brings the screen back on when dimmed or off
 """
 
-from bin.motion_detection_service import MotionDetectionService, DisplayState
 import os
 import sys
 import time
@@ -16,6 +17,7 @@ import threading
 
 # Add parent directory to path so we can import from bin package
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from bin.motion_detection_service import MotionDetectionService, DisplayState
 
 
 def load_config_value(key, default=None):

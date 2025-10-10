@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+# fmt: off
+# isort: skip_file
 """
 Motion Sensor Capabilities Test for Raspberry Pi Weather Display
 
@@ -9,8 +10,6 @@ This script tests the motion sensor functionality and verifies that:
 4. Display state transitions work properly
 """
 
-from bin.display_controller import DisplayController, DisplayState as ControllerDisplayState
-from bin.motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
 import os
 import sys
 import time
@@ -19,6 +18,8 @@ from typing import Optional
 
 # Add the bin directory to the path so we can import the modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bin'))
+from bin.display_controller import DisplayController, DisplayState as ControllerDisplayState
+from bin.motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
 
 
 def detect_raspberry_pi():
