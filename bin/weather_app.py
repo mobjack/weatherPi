@@ -1,20 +1,102 @@
-from .temperature_graph import TemperatureGraph
-from .weather_service_openweather import WeatherService
-from .motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
-from .display_controller import DisplayController, DisplayState as ControllerDisplayState
 import os
-import random
+import json
 import time
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QFrame, QPushButton)
+import random
+import datetime
+import importlib.util
+
+from typing import Dict, List, Optional
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont
-import datetime
-from typing import Dict, List, Optional
-import json
+from .temperature_graph import TemperatureGraph
+from .weather_service_openweather import WeatherService
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QLabel, QFrame, QPushButton)
+from .motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
+from .display_controller import DisplayController, DisplayState as ControllerDisplayState
+
+# Load configuration from weather.conf file
+
+
+def load_config_value(key, default=None):
+    """Load a configuration value from weather.conf file"""
+    # Try to find the config file in multiple locations
+    possible_config_paths = [
+        "conf/weather.conf",  # Relative to current directory
+        os.path.join(os.path.dirname(__file__), "..", "conf",
+                     "weather.conf"),  # Relative to script location
+        # Relative to working directory
+        os.path.join(os.getcwd(), "conf", "weather.conf"),
+    ]
+
+    # Get BASE_DIR from config
+    config_path = None
+    for path in possible_config_paths:
+        if os.path.exists(path):
+            config_path = path
+            break
+
+    if not config_path:
+        print(f"⚠️  Warning: Could not find weather.conf in any of these locations:")
+        for path in possible_config_paths:
+            print(f"    - {path}")
+        return default
+
+    try:
+        with open(config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith(f'{key}='):
+                    value = line.split('=', 1)[1].strip()
+                    # Handle BASE_DIR specially - resolve relative paths
+                    if key == 'BASE_DIR' and value and not os.path.isabs(value):
+                        # If BASE_DIR is relative, make it relative to the config file location
+                        value = os.path.abspath(os.path.join(
+                            os.path.dirname(config_path), value))
+                    return value
+    except Exception as e:
+        print(f"⚠️  Warning: Error reading config file {config_path}: {e}")
+
+    return default
+
+
+def resolve_config_path(path, base_dir=None):
+    """Resolve a path relative to the base directory or config file location"""
+    if not path:
+        return path
+
+    # If it's already absolute, return as-is
+    if os.path.isabs(path):
+        return path
+
+    # Get base directory
+    if not base_dir:
+        base_dir = load_config_value("BASE_DIR")
+
+    # If no base_dir configured, try to find it from config file location
+    if not base_dir:
+        # Find the config file to determine base directory
+        possible_config_paths = [
+            "conf/weather.conf",
+            os.path.join(os.path.dirname(__file__),
+                         "..", "conf", "weather.conf"),
+            os.path.join(os.getcwd(), "conf", "weather.conf"),
+        ]
+
+        for config_path in possible_config_paths:
+            if os.path.exists(config_path):
+                # Go up from conf/ to project root
+                base_dir = os.path.dirname(os.path.dirname(config_path))
+                break
+
+    if base_dir:
+        return os.path.join(base_dir, path)
+    else:
+        # Fallback to relative path
+        return path
+
 
 # Import the WallpaperGenerator class
-import importlib.util
 spec = importlib.util.spec_from_file_location(
     "generate_wallpapers_v3", os.path.join(os.path.dirname(__file__), "generate_wallpapers.py"))
 generate_wallpapers_v3 = importlib.util.module_from_spec(spec)
@@ -47,14 +129,15 @@ class WeatherApp(QMainWindow):
             print(f"⚠️  Warning: Could not initialize WeatherService: {e}")
             self.weather_service = None
 
-        # Load location from environment first
-        self.location = os.getenv('LOCATION_ZIP_CODE', '95037')
-        self.location_name = os.getenv('LOCATION_NAME', 'Morgan Hill, CA')
+        # Load location from config file
+        self.location = load_config_value('LOCATION_ZIP_CODE', '95037')
+        self.location_name = load_config_value(
+            'LOCATION_NAME', 'Morgan Hill, CA')
 
-        # Load icon preferences
-        self.use_text_icons = os.getenv(
+        # Load icon preferences from config file
+        self.use_text_icons = load_config_value(
             'USE_TEXT_ICONS', 'false').lower() == 'true'
-        self.use_image_icons = os.getenv(
+        self.use_image_icons = load_config_value(
             'USE_IMAGE_ICONS', 'true').lower() == 'true'
 
         # Load timing configuration
@@ -166,45 +249,19 @@ class WeatherApp(QMainWindow):
                 'WINDOW_HEIGHT': 600                # Window height
             }
 
-            # Try to load from weather.conf file
-            config_path = "conf/weather.conf"
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#') and '=' in line:
-                            key, value = line.split('=', 1)
-                            key = key.strip()
-                            value = value.strip()
-
-                            # Check if this is a timing configuration
-                            if key in default_config:
-                                try:
-                                    self.__dict__[key.lower()] = int(value)
-                                    if key in ['WINDOW_WIDTH', 'WINDOW_HEIGHT']:
-                                        print(f"✅ Loaded {key}: {value}px")
-                                    else:
-                                        print(f"✅ Loaded {key}: {value}ms")
-                                except ValueError:
-                                    print(
-                                        f"⚠️  Invalid value for {key}: {value}, using default")
-                                    self.__dict__[
-                                        key.lower()] = default_config[key]
-                            else:
-                                # Set environment variable for other configs
-                                os.environ[key] = value
-            else:
-                print(
-                    f"⚠️  Config file not found: {config_path}, using defaults")
-
-            # Set defaults for any missing values
-            for key, default_value in default_config.items():
-                if not hasattr(self, key.lower()):
-                    self.__dict__[key.lower()] = default_value
+            # Load each config value using the robust config loader
+            for key in default_config:
+                value = load_config_value(key, str(default_config[key]))
+                try:
+                    self.__dict__[key.lower()] = int(value)
                     if key in ['WINDOW_WIDTH', 'WINDOW_HEIGHT']:
-                        print(f"📋 Using default {key}: {default_value}px")
+                        print(f"✅ Loaded {key}: {value}px")
                     else:
-                        print(f"📋 Using default {key}: {default_value}ms")
+                        print(f"✅ Loaded {key}: {value}ms")
+                except ValueError:
+                    print(
+                        f"⚠️  Invalid value for {key}: {value}, using default")
+                    self.__dict__[key.lower()] = default_config[key]
 
         except Exception as e:
             print(f"⚠️  Error loading timing config: {e}, using defaults")
@@ -227,43 +284,19 @@ class WeatherApp(QMainWindow):
                 'MOTION_TEST_MODE': False
             }
 
-            # Try to load from weather.conf file
-            config_path = "conf/weather.conf"
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#') and '=' in line:
-                            key, value = line.split('=', 1)
-                            key = key.strip()
-                            value = value.strip()
-
-                            # Check if this is a motion configuration
-                            if key in default_config:
-                                try:
-                                    if key == 'MOTION_TEST_MODE':
-                                        self.__dict__[
-                                            key.lower()] = value.lower() == 'true'
-                                    else:
-                                        self.__dict__[key.lower()] = int(value)
-                                    print(f"✅ Loaded {key}: {value}")
-                                except ValueError:
-                                    print(
-                                        f"⚠️  Invalid value for {key}: {value}, using default")
-                                    self.__dict__[
-                                        key.lower()] = default_config[key]
-                            else:
-                                # Set environment variable for other configs
-                                os.environ[key] = value
-            else:
-                print(
-                    f"⚠️  Config file not found: {config_path}, using defaults")
-
-            # Set defaults for any missing values
-            for key, default_value in default_config.items():
-                if not hasattr(self, key.lower()):
-                    self.__dict__[key.lower()] = default_value
-                    print(f"📋 Using default {key}: {default_value}")
+            # Load each config value using the robust config loader
+            for key in default_config:
+                value = load_config_value(key, str(default_config[key]))
+                try:
+                    if key == 'MOTION_TEST_MODE':
+                        self.__dict__[key.lower()] = value.lower() == 'true'
+                    else:
+                        self.__dict__[key.lower()] = int(value)
+                    print(f"✅ Loaded {key}: {value}")
+                except ValueError:
+                    print(
+                        f"⚠️  Invalid value for {key}: {value}, using default")
+                    self.__dict__[key.lower()] = default_config[key]
 
         except Exception as e:
             print(f"⚠️  Error loading motion config: {e}, using defaults")
