@@ -8,7 +8,7 @@ import importlib.util
 
 from typing import Dict, List, Optional
 from PyQt5.QtCore import Qt, QTimer, QDateTime
-from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont
+from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont, QMouseEvent
 from .temperature_graph import TemperatureGraph
 from .weather_service_openweather import WeatherService
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
@@ -457,6 +457,8 @@ class WeatherApp(QMainWindow):
         self.setGeometry(100, 100, self.window_width, self.window_height)
         # Force the window to stay at the configured size
         self.setFixedSize(self.window_width, self.window_height)
+        # Enable mouse tracking for motion detection
+        self.setMouseTracking(True)
         # Background will be set by set_random_background()
 
     def create_widgets(self):
@@ -826,6 +828,32 @@ class WeatherApp(QMainWindow):
         # Add stretch to push button to the right
         location_layout.addStretch()
 
+        # Countdown display (right side, before button)
+        self.countdown_label = QLabel("")
+        # Style the countdown label
+        countdown_font_size = max(8, self.window_width // 120)
+        self.countdown_label.setStyleSheet(f"""
+            QLabel {{
+                color: rgba(255, 255, 255, 0.8);
+                font-size: {countdown_font_size}px;
+                font-weight: 600;
+                padding: 4px 8px;
+                background-color: rgba(0, 0, 0, 0.3);
+                border-radius: 8px;
+                min-width: 40px;
+            }}
+        """)
+        
+        # Apply Inter font to countdown label
+        if hasattr(self, 'inter_font'):
+            countdown_font = QFont(self.inter_font)
+            countdown_font.setPointSize(countdown_font_size)
+            countdown_font.setBold(True)
+            self.countdown_label.setFont(countdown_font)
+        
+        self.countdown_label.setAlignment(Qt.AlignCenter)
+        location_layout.addWidget(self.countdown_label)
+
         # BG Scrap button (right side)
         self.bg_scrap_button = QPushButton("BG Scrap")
         # Style the button with modern, compact design
@@ -905,6 +933,12 @@ class WeatherApp(QMainWindow):
         self.background_timer.start(self.background_update_interval)
         print(f"🎨 Background timer set to {self.background_update_interval}ms")
 
+        # Timer for updating countdown display
+        self.countdown_timer = QTimer()
+        self.countdown_timer.timeout.connect(self.update_countdown_display)
+        self.countdown_timer.start(1000)  # Update every second
+        print(f"⏰ Countdown timer set to 1000ms (1 second)")
+
         # Store current time period to detect changes
         self.current_time_period = self.get_current_time_period()
 
@@ -923,6 +957,44 @@ class WeatherApp(QMainWindow):
         self.date_label.setText(date_str)
 
         print(f"📅 Updated date display: {day_name}, {date_str}")
+
+    def update_countdown_display(self):
+        """Update the countdown display with remaining time"""
+        if not self.motion_service:
+            self.countdown_label.setText("")
+            return
+        
+        countdown_info = self.motion_service.get_countdown_info()
+        if countdown_info and countdown_info['is_active']:
+            remaining = countdown_info['remaining_seconds']
+            timer_type = countdown_info['timer_type']
+            
+            if timer_type == 'dimming':
+                self.countdown_label.setText(f"Dim: {remaining}s")
+            elif timer_type == 'off':
+                self.countdown_label.setText(f"Off: {remaining}s")
+            else:
+                self.countdown_label.setText(f"{remaining}s")
+        else:
+            self.countdown_label.setText("")
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """Handle mouse movement events to reset dimming timer"""
+        if self.motion_service:
+            self.motion_service.reset_dimming_timer()
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse press events to reset dimming timer"""
+        if self.motion_service:
+            self.motion_service.reset_dimming_timer()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        """Handle mouse release events to reset dimming timer"""
+        if self.motion_service:
+            self.motion_service.reset_dimming_timer()
+        super().mouseReleaseEvent(event)
 
     def update_graph(self):
         """Update the temperature graph"""
