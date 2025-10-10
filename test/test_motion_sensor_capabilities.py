@@ -13,11 +13,10 @@ This script tests the motion sensor functionality and verifies that:
 import os
 import sys
 import time
-import threading
 from typing import Optional
 
 # Add the bin directory to the path so we can import the modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bin'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from bin.display_controller import DisplayController, DisplayState as ControllerDisplayState
 from bin.motion_detection_service import MotionDetectionService, DisplayState as MotionDisplayState
 
