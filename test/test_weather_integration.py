@@ -3,12 +3,13 @@
 Test script to verify weather data integration in the weather app
 """
 
+from config_helper import get_location_config
+from weather_service_openweather import WeatherService
 import os
 from dotenv import load_dotenv
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from weather_service_openweather import WeatherService
 
 
 def main():
@@ -22,10 +23,12 @@ def main():
         weather_service = WeatherService()
         print("✅ WeatherService initialized successfully")
 
+        # Get location from config
+        zip_code, location_name = get_location_config()
+
         # Test current weather
-        print("\n📍 Getting current weather for Morgan Hill, CA...")
-        current_weather = weather_service.get_current_weather(
-            "Morgan Hill, CA")
+        print(f"\n📍 Getting current weather for {location_name}...")
+        current_weather = weather_service.get_current_weather(location_name)
         print(f"Current Weather:")
         print(f"  Temperature: {current_weather['temperature']}°F")
         print(f"  Condition: {current_weather['condition']}")
@@ -36,8 +39,7 @@ def main():
 
         # Test forecast
         print("\n📅 Getting 5-day forecast...")
-        forecast = weather_service.get_forecast_weather(
-            "Morgan Hill, CA", days=5)
+        forecast = weather_service.get_forecast_weather(location_name, days=5)
         print("5-Day Forecast:")
         for day in forecast:
             print(

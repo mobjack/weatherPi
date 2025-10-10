@@ -3,12 +3,13 @@
 Test script to demonstrate all weather icons and verify they display correctly
 """
 
+from config_helper import get_location_config
+from weather_service_openweather import WeatherService
 import os
 from dotenv import load_dotenv
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from weather_service_openweather import WeatherService
 
 
 def test_all_weather_icons():
@@ -25,7 +26,7 @@ def test_all_weather_icons():
         print("✅ Weather service initialized")
 
         # Test current weather
-        zip_code = os.getenv('LOCATION_ZIP_CODE', '95037')
+        zip_code, location_name = get_location_config()
         current_weather = weather_service.get_current_weather(zip_code)
 
         print(f"\n📍 Current Weather for {zip_code}:")

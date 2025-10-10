@@ -3,21 +3,21 @@
 Test script for the OpenWeatherMap Weather Service using zip code
 """
 
+from config_helper import get_location_config
+from weather_service_openweather import WeatherService
 import os
 from dotenv import load_dotenv
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from weather_service_openweather import WeatherService
 
 
 def main():
     # Load environment variables
     load_dotenv('../conf/weather.conf')
 
-    # Get zip code from environment
-    zip_code = os.getenv('LOCATION_ZIP_CODE', '95037')
-    location_name = os.getenv('LOCATION_NAME', 'Morgan Hill, CA')
+    # Get zip code from config file
+    zip_code, location_name = get_location_config()
 
     print(
         f"🌤️  Testing OpenWeatherMap Weather Service with Zip Code: {zip_code}")

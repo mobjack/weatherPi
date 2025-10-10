@@ -3,6 +3,7 @@
 Test script for the updated WallpaperGenerator with real weather integration
 """
 
+from config_helper import get_location_config
 from generate_wallpapers import WallpaperGenerator
 import os
 from dotenv import load_dotenv
@@ -28,8 +29,8 @@ def main():
 
         print("✅ WallpaperGenerator initialized successfully")
 
-        # Get zip code from environment
-        zip_code = os.getenv('LOCATION_ZIP_CODE', '95037')
+        # Get zip code from config file
+        zip_code, location_name = get_location_config()
 
         # Test 1: Get current weather condition
         print(

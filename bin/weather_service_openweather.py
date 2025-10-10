@@ -54,7 +54,7 @@ class WeatherService:
         Get current weather data for a location
 
         Args:
-            location: Location string (e.g., "Morgan Hill, CA" or coordinates "37.1305,-121.6544")
+            location: Location string (e.g., "Your City, State" or coordinates "lat,lng")
 
         Returns:
             Dictionary containing current weather data
@@ -93,7 +93,7 @@ class WeatherService:
         Get forecast weather data for a location
 
         Args:
-            location: Location string (e.g., "Morgan Hill, CA" or coordinates "37.1305,-121.6544")
+            location: Location string (e.g., "Your City, State" or coordinates "lat,lng")
             days: Number of forecast days (default: 5)
 
         Returns:
@@ -133,7 +133,7 @@ class WeatherService:
         Get hourly forecast data for the next 10 hours plus historical data for the previous 2 hours
 
         Args:
-            location: Location string (e.g., "Morgan Hill, CA" or coordinates "37.1305,-121.6544")
+            location: Location string (e.g., "Your City, State" or coordinates "lat,lng")
 
         Returns:
             List of dictionaries containing hourly weather data (12 hours total: 2 past + 10 future)
@@ -172,7 +172,7 @@ class WeatherService:
         Convert a location name or zip code to coordinates using OpenWeatherMap Geocoding API
 
         Args:
-            location: Location name (e.g., "Morgan Hill, CA") or zip code (e.g., "95037")
+            location: Location name (e.g., "Your City, State") or zip code (e.g., "12345")
 
         Returns:
             Coordinates string (e.g., "37.1305,-121.6544")
@@ -207,14 +207,14 @@ class WeatherService:
                 print(f"✅ Found coordinates: {lat}, {lng}")
                 return f"{lat},{lng}"
             else:
-                # Fallback to Morgan Hill coordinates
+                # Fallback to default coordinates
                 print("⚠️  No coordinates found, using fallback")
-                return "37.1305,-121.6544"
+                return "37.7749,-122.4194"  # San Francisco, CA as default
 
         except Exception as e:
             print(f"❌ Error geocoding location: {e}")
-            # Fallback to Morgan Hill coordinates
-            return "37.1305,-121.6544"
+            # Fallback to default coordinates
+            return "37.7749,-122.4194"  # San Francisco, CA as default
 
     def _is_coordinate(self, location: str) -> bool:
         """Check if the location string is already in coordinate format"""
@@ -608,14 +608,14 @@ class WeatherService:
             # Need to compute from forecast for the configured location
             # We need a location string; replicate how public methods accept it via env/config
             location = os.getenv('LOCATION_ZIP_CODE') or os.getenv(
-                'LOCATION_NAME') or 'Morgan Hill, CA'
+                'LOCATION_NAME') or 'San Francisco, CA'
             try:
                 if not self._is_coordinate(location):
                     location = self._geocode_location(location)
                 lat, lng = location.split(',')
             except Exception:
-                # If geocoding fails, we still attempt forecast with default Morgan Hill
-                lat, lng = '37.1305', '-121.6544'
+                # If geocoding fails, we still attempt forecast with default coordinates
+                lat, lng = '37.7749', '-122.4194'  # San Francisco, CA
 
             url = f"{self.base_url}/forecast"
             params = {
@@ -664,12 +664,12 @@ if __name__ == "__main__":
 
         # Test current weather
         print("Testing current weather...")
-        current = weather_service.get_current_weather("Morgan Hill, CA")
+        current = weather_service.get_current_weather("San Francisco, CA")
         print(f"Current weather: {current}")
 
         # Test forecast
         print("\nTesting forecast...")
-        forecast = weather_service.get_forecast_weather("Morgan Hill, CA")
+        forecast = weather_service.get_forecast_weather("San Francisco, CA")
         print(f"Forecast: {forecast}")
 
     except Exception as e:

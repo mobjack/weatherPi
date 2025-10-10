@@ -4,12 +4,13 @@ Test script for the WeatherService class
 Run this to verify your Google Weather API setup is working correctly
 """
 
+from config_helper import get_location_config
+from weather_service import WeatherService
 import os
 from dotenv import load_dotenv
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from weather_service import WeatherService
 
 
 def main():
@@ -32,16 +33,17 @@ def main():
         weather_service = WeatherService()
         print("✅ WeatherService initialized successfully")
 
+        # Get location from config
+        zip_code, location_name = get_location_config()
+
         # Test current weather
-        print("\n📍 Testing current weather for Morgan Hill, CA...")
-        current_weather = weather_service.get_current_weather(
-            "Morgan Hill, CA")
+        print(f"\n📍 Testing current weather for {location_name}...")
+        current_weather = weather_service.get_current_weather(location_name)
         print(f"Current Weather: {current_weather}")
 
         # Test forecast
         print("\n📅 Testing 5-day forecast...")
-        forecast = weather_service.get_forecast_weather(
-            "Morgan Hill, CA", days=5)
+        forecast = weather_service.get_forecast_weather(location_name, days=5)
         print(f"Forecast: {forecast}")
 
         print("\n✅ All tests passed! Your weather service is working correctly.")

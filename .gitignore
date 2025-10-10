@@ -146,6 +146,7 @@ feedback/
 !conf/*.example
 !conf/day_night.json
 !conf/gcp_conditions.json
+test/double_check_ai.py
 
 # Temporary files
 *.tmp

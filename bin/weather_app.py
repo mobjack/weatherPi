@@ -112,10 +112,6 @@ class WeatherApp(QMainWindow):
         super().__init__()
         # Initialize the wallpaper generator
         try:
-            print("🔍 DEBUG: Initializing WallpaperGenerator...")
-            print(
-                f"🔍 DEBUG: BASE_DIR from config: {load_config_value('BASE_DIR')}")
-
             # Use config-based paths instead of hardcoded ones
             day_night_json = resolve_config_path(
                 load_config_value("DAY_NIGHT_JSON", "conf/day_night.json"))
@@ -124,31 +120,14 @@ class WeatherApp(QMainWindow):
             output_dir = resolve_config_path(load_config_value(
                 "OUTPUT_DIR", "images/generated_wallpapers"))
 
-            print(f"🔍 DEBUG: Resolved day_night_json: {day_night_json}")
-            print(f"🔍 DEBUG: Resolved conditions_json: {conditions_json}")
-            print(f"🔍 DEBUG: Resolved output_dir: {output_dir}")
-
             self.wallpaper_generator = WallpaperGenerator(
                 day_night_json=day_night_json,
                 conditions_json=conditions_json,
                 output_dir=output_dir
             )
             print("✅ WallpaperGenerator initialized successfully")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator output_dir: {self.wallpaper_generator.output_dir}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator day_night_json: {self.wallpaper_generator.day_night_json}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator conditions_json: {self.wallpaper_generator.conditions_json}")
         except Exception as e:
             print(f"⚠️  Warning: Could not initialize WallpaperGenerator: {e}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator initialization error type: {type(e).__name__}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator initialization error args: {e.args}")
-            import traceback
-            print(f"🔍 DEBUG: WallpaperGenerator initialization traceback:")
-            traceback.print_exc()
             self.wallpaper_generator = None
 
         # Initialize the weather service
@@ -160,15 +139,12 @@ class WeatherApp(QMainWindow):
             self.weather_service = None
 
         # Load location from config file
-        print("🔍 DEBUG: Loading location from config...")
         self.location = load_config_value('LOCATION_ZIP_CODE')
         if not self.location:
             print("❌ ERROR: LOCATION_ZIP_CODE not found in weather.conf")
             sys.exit(1)
         self.location_name = load_config_value(
             'LOCATION_NAME', 'Unknown Location')
-        print(
-            f"🔍 DEBUG: Location loaded - ZIP: {self.location}, Name: {self.location_name}")
 
         # Load icon preferences from config file
         self.use_text_icons = load_config_value(
@@ -212,7 +188,8 @@ class WeatherApp(QMainWindow):
     def collect_wallpaper_images(self):
         """Collect all available wallpaper images from the generated_wallpapers folder"""
         wallpaper_images = []
-        wallpaper_base_path = "/Users/ericparker/Documents/weatherPi/images/generated_wallpapers"
+        wallpaper_base_path = resolve_config_path(
+            load_config_value("OUTPUT_DIR", "images/generated_wallpapers"))
 
         if os.path.exists(wallpaper_base_path):
             # Get all style folders (not just photoreal-soft)
@@ -410,68 +387,12 @@ class WeatherApp(QMainWindow):
 
     def generate_current_weather_wallpaper(self):
         """Generate a wallpaper based on current real weather conditions"""
-        print("🔍 DEBUG: Starting wallpaper generation process...")
-
         if not self.wallpaper_generator:
             print("⚠️  WallpaperGenerator not available, skipping generation")
             return None
 
         try:
             print("🎨 Generating current weather wallpaper...")
-            print(f"🔍 DEBUG: Location: {self.location}")
-            print(
-                f"🔍 DEBUG: Window size: {self.window_width}x{self.window_height}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator output_dir: {getattr(self.wallpaper_generator, 'output_dir', 'NOT SET')}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator day_night_json: {getattr(self.wallpaper_generator, 'day_night_json', 'NOT SET')}")
-            print(
-                f"🔍 DEBUG: WallpaperGenerator conditions_json: {getattr(self.wallpaper_generator, 'conditions_json', 'NOT SET')}")
-
-            # Check if output directory exists and is writable
-            output_dir = getattr(self.wallpaper_generator, 'output_dir', None)
-            if output_dir:
-                print(f"🔍 DEBUG: Checking output directory: {output_dir}")
-                if os.path.exists(output_dir):
-                    print(f"🔍 DEBUG: Output directory exists: {output_dir}")
-                    if os.access(output_dir, os.W_OK):
-                        print(
-                            f"🔍 DEBUG: Output directory is writable: {output_dir}")
-                    else:
-                        print(
-                            f"❌ ERROR: Output directory is not writable: {output_dir}")
-                        return None
-                else:
-                    print(
-                        f"🔍 DEBUG: Output directory does not exist, will be created: {output_dir}")
-
-            # Check if JSON files exist
-            day_night_json = getattr(
-                self.wallpaper_generator, 'day_night_json', None)
-            conditions_json = getattr(
-                self.wallpaper_generator, 'conditions_json', None)
-
-            if day_night_json:
-                print(f"🔍 DEBUG: Checking day_night_json: {day_night_json}")
-                if os.path.exists(day_night_json):
-                    print(f"🔍 DEBUG: day_night_json exists: {day_night_json}")
-                else:
-                    print(
-                        f"❌ ERROR: day_night_json not found: {day_night_json}")
-                    return None
-
-            if conditions_json:
-                print(f"🔍 DEBUG: Checking conditions_json: {conditions_json}")
-                if os.path.exists(conditions_json):
-                    print(
-                        f"🔍 DEBUG: conditions_json exists: {conditions_json}")
-                else:
-                    print(
-                        f"❌ ERROR: conditions_json not found: {conditions_json}")
-                    return None
-
-            print(
-                "🔍 DEBUG: All checks passed, calling generate_current_weather_wallpaper...")
             result = self.wallpaper_generator.generate_current_weather_wallpaper(
                 style="random",  # Randomly select from available styles
                 location=self.location,  # Use zip code from config
@@ -484,25 +405,10 @@ class WeatherApp(QMainWindow):
             print(
                 f"✅ Generated current weather wallpaper: {result['filename']}")
             print(f"   Path: {result['path']}")
-
-            # Verify the file was actually created
-            if os.path.exists(result['path']):
-                file_size = os.path.getsize(result['path'])
-                print(
-                    f"🔍 DEBUG: File created successfully, size: {file_size} bytes")
-            else:
-                print(f"❌ ERROR: File was not created: {result['path']}")
-                return None
-
             return result['path']
 
         except Exception as e:
             print(f"❌ Error in weather_app generating weather wallpaper: {e}")
-            print(f"🔍 DEBUG: Exception type: {type(e).__name__}")
-            print(f"🔍 DEBUG: Exception args: {e.args}")
-            import traceback
-            print(f"🔍 DEBUG: Full traceback:")
-            traceback.print_exc()
             return None
 
     def set_random_background(self):
