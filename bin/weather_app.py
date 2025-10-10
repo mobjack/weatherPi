@@ -360,9 +360,9 @@ class WeatherApp(QMainWindow):
 
     def on_motion_detected(self):
         """Callback for when motion is detected"""
-        print("🔍 Motion detected - starting display timer")
+        print("🔍 Motion detected - resetting dimming timer")
         if self.motion_service:
-            self.motion_service.start_display_timer()
+            self.motion_service.reset_dimming_timer()
 
     def on_display_dim(self):
         """Callback for when display should dim"""
@@ -843,14 +843,14 @@ class WeatherApp(QMainWindow):
                 min-width: 40px;
             }}
         """)
-        
+
         # Apply Inter font to countdown label
         if hasattr(self, 'inter_font'):
             countdown_font = QFont(self.inter_font)
             countdown_font.setPointSize(countdown_font_size)
             countdown_font.setBold(True)
             self.countdown_label.setFont(countdown_font)
-        
+
         self.countdown_label.setAlignment(Qt.AlignCenter)
         location_layout.addWidget(self.countdown_label)
 
@@ -963,12 +963,12 @@ class WeatherApp(QMainWindow):
         if not self.motion_service:
             self.countdown_label.setText("")
             return
-        
+
         countdown_info = self.motion_service.get_countdown_info()
         if countdown_info and countdown_info['is_active']:
             remaining = countdown_info['remaining_seconds']
             timer_type = countdown_info['timer_type']
-            
+
             if timer_type == 'dimming':
                 self.countdown_label.setText(f"Dim: {remaining}s")
             elif timer_type == 'off':

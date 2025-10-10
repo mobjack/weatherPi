@@ -147,17 +147,12 @@ class MotionSensorTester:
         # Test motion detection capability
         self.test_results['motion_detection'] = True
 
-        # Check if motion resets dimmer
+        # Check if motion resets dimmer - motion should always reset timer regardless of state
         if self.motion_service:
             current_state = self.motion_service.get_current_state()
-            if current_state in [MotionDisplayState.DIMMED, MotionDisplayState.OFF]:
-                print(
-                    "   ✅ Motion detected while display was dimmed/off - should reset timer")
-                self.test_results['motion_resets_dimmer'] = True
-            else:
-                print(
-                    "   ✅ Motion detected while display was active - timer should reset")
-                self.test_results['motion_resets_dimmer'] = True
+            print(f"   Current state when motion detected: {current_state.value}")
+            print("   ✅ Motion detected - should reset timer and activate display if needed")
+            self.test_results['motion_resets_dimmer'] = True
 
     def on_display_dim(self):
         """Callback for display dimming"""
@@ -311,7 +306,7 @@ class MotionSensorTester:
             current_state = self.motion_service.get_current_state()
             print(f"   Current state before motion: {current_state.value}")
 
-            # Trigger motion
+            # Trigger motion - this should call the callback which resets the dimming timer
             print("   Triggering motion from dimmed state...")
             self.motion_service.trigger_motion()
             time.sleep(2)
@@ -326,6 +321,7 @@ class MotionSensorTester:
             else:
                 print(f"   ❌ Display state is {current_state.value}, expected ACTIVE")
                 print("   This indicates motion is not properly activating the display")
+                print("   Note: The motion callback should call reset_dimming_timer() to activate display")
 
         # Print results
         self.print_test_results()
