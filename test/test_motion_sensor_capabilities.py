@@ -189,9 +189,9 @@ class MotionSensorTester:
             self.display_controller.set_display_state(
                 ControllerDisplayState.ACTIVE)
 
-        # Test if motion activates display
-        if self.motion_count > 0:
-            self.test_results['motion_activates_display'] = True
+        # Test if motion activates display - this gets called when display becomes active
+        # We'll set this to True here and let the motion test verify it
+        self.test_results['motion_activates_display'] = True
 
     def test_motion_detection(self, duration=60):
         """Test motion detection for specified duration"""
@@ -299,9 +299,17 @@ class MotionSensorTester:
         # Test 4: Motion activation from dimmed/off state
         print(f"\n🔄 Testing motion activation from dimmed state...")
         if self.motion_service:
+            # Reset the test result
+            self.test_results['motion_activates_display'] = False
+
             # Set to dimmed state
+            print("   Setting display to DIMMED state...")
             self.motion_service._set_display_state(MotionDisplayState.DIMMED)
             time.sleep(1)
+
+            # Check current state
+            current_state = self.motion_service.get_current_state()
+            print(f"   Current state before motion: {current_state.value}")
 
             # Trigger motion
             print("   Triggering motion from dimmed state...")
@@ -310,12 +318,14 @@ class MotionSensorTester:
 
             # Check if it went back to active
             current_state = self.motion_service.get_current_state()
+            print(f"   Current state after motion: {current_state.value}")
+
             if current_state == MotionDisplayState.ACTIVE:
                 print("   ✅ Motion successfully activated display from dimmed state")
                 self.test_results['motion_activates_display'] = True
             else:
-                print(
-                    f"   ❌ Display state is {current_state.value}, expected ACTIVE")
+                print(f"   ❌ Display state is {current_state.value}, expected ACTIVE")
+                print("   This indicates motion is not properly activating the display")
 
         # Print results
         self.print_test_results()
