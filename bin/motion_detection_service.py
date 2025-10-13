@@ -55,6 +55,9 @@ class MotionDetectionService:
         self.motion_detected = False
         self.last_motion_time = time.time()
 
+        # GPIO hardware
+        self.motion_sensor = None
+
         # Timers
         self.display_timer = None
         self.dimming_timer = None
@@ -89,37 +92,39 @@ class MotionDetectionService:
     def _setup_gpio(self):
         """Setup GPIO for motion sensor (Raspberry Pi only)"""
         try:
-            import RPi.GPIO as GPIO
+            from gpiozero import MotionSensor
 
-            # Set GPIO mode to BCM
-            GPIO.setmode(GPIO.BCM)
-
-            # Setup motion sensor pin as input with pull-down resistor
-            GPIO.setup(self.motion_sensor_pin, GPIO.IN,
-                       pull_up_down=GPIO.PUD_DOWN)
-
-            # Add interrupt for motion detection
-            GPIO.add_event_detect(
-                self.motion_sensor_pin,
-                GPIO.RISING,
-                callback=self._motion_callback,
-                bouncetime=200  # 200ms debounce
+            # Create motion sensor using gpiozero
+            self.motion_sensor = MotionSensor(
+                pin=self.motion_sensor_pin,
+                pull_up=True,  # Enable pull-up resistor
+                queue_len=1,   # Minimal queue for immediate response
+                sample_rate=10,  # 10 samples per second
+                threshold=0.5   # 50% threshold for motion detection
             )
 
+            # Set up motion detection callback
+            self.motion_sensor.when_motion = self._motion_callback
+
             self.gpio_available = True
-            print(f"✅ GPIO setup successful on pin {self.motion_sensor_pin}")
+            print(
+                f"✅ GPIO setup successful on pin {self.motion_sensor_pin} using gpiozero")
 
         except ImportError:
-            print("⚠️  RPi.GPIO not available - running in test mode")
-            self.test_mode = True
+            print("⚠️  gpiozero not available")
+            if not self.test_mode:
+                print("   → GPIO required but not available - forcing test mode")
+                self.test_mode = True
             self.gpio_available = False
         except Exception as e:
-            print(f"⚠️  GPIO setup failed: {e} - running in test mode")
-            self.test_mode = True
+            print(f"⚠️  GPIO setup failed: {e}")
+            if not self.test_mode:
+                print("   → GPIO setup failed - forcing test mode")
+                self.test_mode = True
             self.gpio_available = False
 
-    def _motion_callback(self, channel):
-        """GPIO callback for motion detection"""
+    def _motion_callback(self):
+        """GPIO callback for motion detection (gpiozero doesn't pass channel parameter)"""
         if not self.motion_detected:  # Avoid duplicate triggers
             self.motion_detected = True
             self.last_motion_time = time.time()
@@ -336,9 +341,9 @@ class MotionDetectionService:
 
         if self.gpio_available:
             try:
-                import RPi.GPIO as GPIO
-                GPIO.cleanup()
-                print("✅ GPIO cleanup completed")
+                if hasattr(self, 'motion_sensor'):
+                    self.motion_sensor.close()
+                    print("✅ GPIO motion sensor cleaned up")
             except Exception as e:
                 print(f"⚠️  GPIO cleanup failed: {e}")
 
