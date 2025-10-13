@@ -129,6 +129,14 @@ class MotionDetectionService:
             if self.on_motion_detected:
                 self.on_motion_detected()
 
+            # Reset the flag after a short delay to allow for new motion detection
+            def reset_motion_flag():
+                time.sleep(1)  # Wait 1 second
+                self.motion_detected = False
+
+            import threading
+            threading.Thread(target=reset_motion_flag, daemon=True).start()
+
     def _start_motion_detection(self):
         """Start the motion detection thread"""
         if self.test_mode:
@@ -148,6 +156,14 @@ class MotionDetectionService:
                                     self.on_motion_detected()
                                 except Exception as e:
                                     print(f"⚠️  Error in motion callback: {e}")
+
+                            # Reset the flag after a short delay to allow for new motion detection
+                            def reset_motion_flag():
+                                time.sleep(1)  # Wait 1 second
+                                self.motion_detected = False
+
+                            threading.Thread(
+                                target=reset_motion_flag, daemon=True).start()
                 except Exception as e:
                     print(f"⚠️  Error in motion simulator thread: {e}")
 
