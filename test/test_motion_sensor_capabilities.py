@@ -154,6 +154,10 @@ class MotionSensorTester:
             print("   ✅ Motion detected - should reset timer and activate display if needed")
             self.test_results['motion_resets_dimmer'] = True
 
+            # IMPORTANT: Actually call reset_dimming_timer to activate display
+            print("   🔄 Calling reset_dimming_timer to activate display...")
+            self.motion_service.reset_dimming_timer()
+
     def on_display_dim(self):
         """Callback for display dimming"""
         current_time = time.strftime('%H:%M:%S')
