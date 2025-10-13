@@ -7,7 +7,7 @@ import datetime
 import importlib.util
 
 from typing import Dict, List, Optional
-from PyQt5.QtCore import Qt, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QTimer, QDateTime, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont, QMouseEvent
 from .temperature_graph import TemperatureGraph
 from .weather_service_openweather import WeatherService
@@ -108,8 +108,21 @@ WallpaperGenerator = generate_wallpapers_v3.WallpaperGenerator
 
 
 class WeatherApp(QMainWindow):
+    # Signals for thread-safe UI updates
+    show_blank_screen_signal = pyqtSignal()
+    show_normal_content_signal = pyqtSignal()
+    start_gradual_dimming_signal = pyqtSignal()
+    show_completely_black_signal = pyqtSignal()
+
     def __init__(self):
         super().__init__()
+
+        # Connect signals to slots
+        self.show_blank_screen_signal.connect(self.show_blank_screen)
+        self.show_normal_content_signal.connect(self.show_normal_content)
+        self.start_gradual_dimming_signal.connect(self.start_gradual_dimming)
+        self.show_completely_black_signal.connect(
+            self.show_completely_black_screen)
         # Initialize the wallpaper generator
         try:
             # Use config-based paths instead of hardcoded ones
@@ -179,6 +192,13 @@ class WeatherApp(QMainWindow):
             self.weather_icon.update()
             print(
                 f"🔍 Initial weather icon after load: '{self.weather_icon.text()}'")
+
+        # Initialize blank screen state
+        self.is_blank_screen = False
+        self.blank_overlay = None
+        self.dimming_timer = None
+        self.dimming_start_time = None
+        self.dimming_duration = 120000  # 2 minutes in milliseconds
 
         # Start motion detection timer after everything is initialized
         if self.motion_service:
@@ -344,19 +364,10 @@ class WeatherApp(QMainWindow):
             self.motion_service = None
 
     def setup_display_control(self):
-        """Setup display controller"""
-        try:
-            self.display_controller = DisplayController(
-                dim_brightness=30,
-                full_brightness=100,
-                test_mode=self.motion_test_mode
-            )
-
-            print("✅ Display controller initialized")
-
-        except Exception as e:
-            print(f"❌ Error initializing display controller: {e}")
-            self.display_controller = None
+        """Setup display controller - disabled for blank screen mode"""
+        # Display controller disabled for blank screen testing
+        self.display_controller = None
+        print("🖥️  Display controller disabled - using blank screen mode")
 
     def on_motion_detected(self):
         """Callback for when motion is detected"""
@@ -365,25 +376,289 @@ class WeatherApp(QMainWindow):
             self.motion_service.reset_dimming_timer()
 
     def on_display_dim(self):
-        """Callback for when display should dim"""
-        print("🖥️  Dimming display")
-        if self.display_controller:
-            self.display_controller.set_display_state(
-                ControllerDisplayState.DIMMED)
+        """Callback for when display should dim - start gradual dimming"""
+        print("🖥️  Starting gradual dimming (2 minutes)")
+        self.start_gradual_dimming_signal.emit()
 
     def on_display_off(self):
-        """Callback for when display should turn off"""
-        print("🖥️  Turning off display")
-        if self.display_controller:
-            self.display_controller.set_display_state(
-                ControllerDisplayState.OFF)
+        """Callback for when display should turn off - show completely black screen"""
+        print("🖥️  Showing completely black screen")
+        self.show_completely_black_signal.emit()
 
     def on_display_active(self):
-        """Callback for when display should become active"""
-        print("🖥️  Activating display")
-        if self.display_controller:
-            self.display_controller.set_display_state(
-                ControllerDisplayState.ACTIVE)
+        """Callback for when display should become active - show normal content"""
+        print("🖥️  Showing normal content")
+        self.show_normal_content_signal.emit()
+
+    def show_normal_content(self):
+        """Show normal weather app content"""
+        if self.is_blank_screen or self.blank_overlay:
+            # Stop any ongoing dimming
+            self.stop_gradual_dimming()
+            self.hide_blank_screen()
+            self.is_blank_screen = False
+            print("✅ Normal content restored - screen at full brightness")
+
+    def show_blank_screen(self):
+        """Show blank screen with small 'x' in lower right quadrant"""
+        if not self.is_blank_screen:
+            self.create_blank_overlay()
+            self.is_blank_screen = True
+            print("✅ Blank screen activated")
+
+    def create_blank_overlay(self):
+        """Create a blank overlay with 'x' button in lower right quadrant"""
+        # Create overlay widget
+        self.blank_overlay = QWidget(self)
+        self.blank_overlay.setGeometry(0, 0, self.width(), self.height())
+
+        # Set black background
+        self.blank_overlay.setStyleSheet("background-color: black;")
+
+        # Create 'x' button in lower right quadrant
+        x_button = QPushButton("×", self.blank_overlay)
+
+        # Calculate position in lower right quadrant
+        # Responsive size
+        button_size = max(40, min(self.width(), self.height()) // 15)
+        x_pos = self.width() - button_size - 20  # 20px margin from right
+        y_pos = self.height() - button_size - 20  # 20px margin from bottom
+
+        x_button.setGeometry(x_pos, y_pos, button_size, button_size)
+
+        # Style the 'x' button - very dark grey for minimal glow
+        x_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(20, 20, 20, 0.8);
+                color: rgba(60, 60, 60, 0.9);
+                border: 1px solid rgba(40, 40, 40, 0.6);
+                border-radius: {button_size//2}px;
+                font-size: {button_size//2}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(30, 30, 30, 0.9);
+                color: rgba(80, 80, 80, 1.0);
+                border-color: rgba(50, 50, 50, 0.8);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(15, 15, 15, 1.0);
+                color: rgba(50, 50, 50, 1.0);
+            }}
+        """)
+
+        # Connect click to wake screen
+        x_button.clicked.connect(self.wake_screen)
+
+        # Show the overlay
+        self.blank_overlay.show()
+        self.blank_overlay.raise_()  # Bring to front
+
+        print(f"✅ Blank overlay created with 'x' button at ({x_pos}, {y_pos})")
+
+    def hide_blank_screen(self):
+        """Hide the blank screen overlay and restore full brightness"""
+        if self.blank_overlay:
+            # Ensure the overlay is completely hidden and removed
+            self.blank_overlay.hide()
+            self.blank_overlay.setParent(None)  # Remove from parent
+            self.blank_overlay.deleteLater()
+            self.blank_overlay = None
+            print("✅ Blank screen overlay completely removed - full brightness restored")
+
+    def wake_screen(self):
+        """Wake the screen when 'x' is clicked"""
+        print("🔍 Screen wake requested via 'x' button")
+        if self.motion_service:
+            self.motion_service.reset_dimming_timer()
+        self.show_normal_content_signal.emit()
+
+    def start_gradual_dimming(self):
+        """Start the gradual dimming process over 2 minutes"""
+        # Stop any existing dimming timer
+        if self.dimming_timer:
+            self.dimming_timer.stop()
+
+        # Create the dimming overlay
+        self.create_dimming_overlay()
+
+        # Start the dimming timer
+        self.dimming_start_time = time.time() * 1000  # Convert to milliseconds
+        self.dimming_timer = QTimer()
+        self.dimming_timer.timeout.connect(self.update_dimming_opacity)
+        self.dimming_timer.start(50)  # Update every 50ms for smooth animation
+
+        print("✅ Gradual dimming started")
+
+    def create_dimming_overlay(self):
+        """Create the dimming overlay that will gradually fade to black"""
+        # Create overlay widget
+        self.blank_overlay = QWidget(self)
+        self.blank_overlay.setGeometry(0, 0, self.width(), self.height())
+
+        # Start with transparent black background
+        self.blank_overlay.setStyleSheet(
+            "background-color: rgba(0, 0, 0, 0.0);")
+
+        # Create 'x' button in lower right quadrant
+        x_button = QPushButton("×", self.blank_overlay)
+
+        # Calculate position in lower right quadrant
+        # Responsive size
+        button_size = max(40, min(self.width(), self.height()) // 15)
+        x_pos = self.width() - button_size - 20  # 20px margin from right
+        y_pos = self.height() - button_size - 20  # 20px margin from bottom
+
+        x_button.setGeometry(x_pos, y_pos, button_size, button_size)
+
+        # Style the 'x' button - very dark grey for minimal glow
+        x_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(20, 20, 20, 0.8);
+                color: rgba(60, 60, 60, 0.9);
+                border: 1px solid rgba(40, 40, 40, 0.6);
+                border-radius: {button_size//2}px;
+                font-size: {button_size//2}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(30, 30, 30, 0.9);
+                color: rgba(80, 80, 80, 1.0);
+                border-color: rgba(50, 50, 50, 0.8);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(15, 15, 15, 1.0);
+                color: rgba(50, 50, 50, 1.0);
+            }}
+        """)
+
+        # Connect click to wake screen
+        x_button.clicked.connect(self.wake_screen)
+
+        # Show the overlay
+        self.blank_overlay.show()
+        self.blank_overlay.raise_()  # Bring to front
+
+        print(
+            f"✅ Dimming overlay created with 'x' button at ({x_pos}, {y_pos})")
+
+    def update_dimming_opacity(self):
+        """Update the dimming overlay opacity based on elapsed time"""
+        if not self.dimming_start_time or not self.blank_overlay:
+            return
+
+        # Calculate elapsed time in milliseconds
+        current_time = time.time() * 1000
+        elapsed = current_time - self.dimming_start_time
+
+        # Calculate opacity (0.0 to 1.0) based on elapsed time
+        if elapsed >= self.dimming_duration:
+            # Dimming complete - set to full opacity
+            opacity = 1.0
+            self.dimming_timer.stop()
+            self.is_blank_screen = True
+            print("✅ Gradual dimming completed - screen is now blank")
+        else:
+            # Calculate current opacity (0.0 to 1.0)
+            opacity = elapsed / self.dimming_duration
+
+        # Update the overlay opacity
+        self.blank_overlay.setStyleSheet(
+            f"background-color: rgba(0, 0, 0, {opacity:.3f});")
+
+        # Update button opacity to match (make it more visible as background gets darker)
+        button_opacity = min(0.8, 0.2 + (opacity * 0.6)
+                             )  # Start at 0.2, reach 0.8
+        button = self.blank_overlay.findChild(QPushButton)
+        if button:
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(20, 20, 20, {button_opacity:.2f});
+                    color: rgba(60, 60, 60, {min(0.9, 0.3 + opacity * 0.6):.2f});
+                    border: 1px solid rgba(40, 40, 40, {min(0.6, 0.2 + opacity * 0.4):.2f});
+                    border-radius: {button.size().width()//2}px;
+                    font-size: {button.size().width()//2}px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    background-color: rgba(30, 30, 30, {min(0.9, button_opacity + 0.1):.2f});
+                    color: rgba(80, 80, 80, 1.0);
+                    border-color: rgba(50, 50, 50, 0.8);
+                }}
+                QPushButton:pressed {{
+                    background-color: rgba(15, 15, 15, 1.0);
+                    color: rgba(50, 50, 50, 1.0);
+                }}
+            """)
+
+    def stop_gradual_dimming(self):
+        """Stop the gradual dimming process and reset state"""
+        if self.dimming_timer:
+            self.dimming_timer.stop()
+            self.dimming_timer = None
+        self.dimming_start_time = None
+        self.is_blank_screen = False
+        print("✅ Gradual dimming stopped and state reset")
+
+    def show_completely_black_screen(self):
+        """Show a completely black screen with only the 'x' button visible"""
+        # Stop any ongoing dimming first
+        self.stop_gradual_dimming()
+
+        # Remove any existing overlay
+        if self.blank_overlay:
+            self.hide_blank_screen()
+
+        # Create completely black overlay
+        self.blank_overlay = QWidget(self)
+        self.blank_overlay.setGeometry(0, 0, self.width(), self.height())
+
+        # Set completely black background (100% opacity)
+        self.blank_overlay.setStyleSheet(
+            "background-color: rgba(0, 0, 0, 1.0);")
+
+        # Create 'x' button in lower right quadrant
+        x_button = QPushButton("×", self.blank_overlay)
+
+        # Calculate position in lower right quadrant
+        # Responsive size
+        button_size = max(40, min(self.width(), self.height()) // 15)
+        x_pos = self.width() - button_size - 20  # 20px margin from right
+        y_pos = self.height() - button_size - 20  # 20px margin from bottom
+
+        x_button.setGeometry(x_pos, y_pos, button_size, button_size)
+
+        # Style the 'x' button - very dark grey for minimal glow
+        x_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: rgba(20, 20, 20, 0.8);
+                color: rgba(60, 60, 60, 0.9);
+                border: 1px solid rgba(40, 40, 40, 0.6);
+                border-radius: {button_size//2}px;
+                font-size: {button_size//2}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(30, 30, 30, 0.9);
+                color: rgba(80, 80, 80, 1.0);
+                border-color: rgba(50, 50, 50, 0.8);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(15, 15, 15, 1.0);
+                color: rgba(50, 50, 50, 1.0);
+            }}
+        """)
+
+        # Connect click to wake screen
+        x_button.clicked.connect(self.wake_screen)
+
+        # Show the overlay
+        self.blank_overlay.show()
+        self.blank_overlay.raise_()  # Bring to front
+
+        self.is_blank_screen = True
+        print(
+            f"✅ Completely black screen activated with 'x' button at ({x_pos}, {y_pos})")
 
     def generate_current_weather_wallpaper(self):
         """Generate a wallpaper based on current real weather conditions"""
@@ -1419,6 +1694,12 @@ class WeatherApp(QMainWindow):
             if hasattr(self, 'display_controller') and self.display_controller:
                 self.display_controller.cleanup()
                 print("✅ Display controller cleaned up")
+
+            # Cleanup blank overlay and dimming timer
+            if hasattr(self, 'blank_overlay') and self.blank_overlay:
+                self.stop_gradual_dimming()
+                self.hide_blank_screen()
+                print("✅ Blank overlay cleaned up")
 
         except Exception as e:
             print(f"⚠️  Error during cleanup: {e}")

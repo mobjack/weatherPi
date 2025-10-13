@@ -134,19 +134,25 @@ class MotionDetectionService:
         if self.test_mode:
             # In test mode, simulate motion every 30 seconds for testing
             def test_motion_simulator():
-                while True:
-                    time.sleep(30)  # Simulate motion every 30 seconds
-                    if not self.motion_detected:
-                        self.motion_detected = True
-                        self.last_motion_time = time.time()
-                        print("🔍 [TEST] Simulated motion detected!")
+                try:
+                    while True:
+                        time.sleep(30)  # Simulate motion every 30 seconds
+                        if not self.motion_detected:
+                            self.motion_detected = True
+                            self.last_motion_time = time.time()
+                            print("🔍 [TEST] Simulated motion detected!")
 
-                        # Trigger motion detected callback
-                        if self.on_motion_detected:
-                            self.on_motion_detected()
+                            # Trigger motion detected callback
+                            if self.on_motion_detected:
+                                try:
+                                    self.on_motion_detected()
+                                except Exception as e:
+                                    print(f"⚠️  Error in motion callback: {e}")
+                except Exception as e:
+                    print(f"⚠️  Error in motion simulator thread: {e}")
 
             test_thread = threading.Thread(
-                target=test_motion_simulator, daemon=True)
+                target=test_motion_simulator, daemon=True, name="MotionSimulator")
             test_thread.start()
             print("🧪 Test mode motion simulator started")
 
