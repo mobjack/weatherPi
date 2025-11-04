@@ -26,28 +26,25 @@ class MotionDetectionService:
 
     This class manages:
     - GPIO-based motion detection (when not in test mode)
-    - Display timeout timers
-    - Display state transitions (active -> dimmed -> off)
+    - Display timeout timer
+    - Display state transitions (active -> off)
     - Callbacks for state changes
     """
 
     def __init__(self,
                  motion_sensor_pin: int = 18,
                  display_timeout: int = 60,
-                 display_dimming_timeout: int = 60,
                  test_mode: bool = False):
         """
         Initialize the motion detection service.
 
         Args:
             motion_sensor_pin: GPIO pin number for motion sensor (BCM numbering)
-            display_timeout: Time in seconds before display dims
-            display_dimming_timeout: Time in seconds before display turns off after dimming
+            display_timeout: Time in seconds before display turns off
             test_mode: If True, simulates motion detection without GPIO
         """
         self.motion_sensor_pin = motion_sensor_pin
         self.display_timeout = display_timeout
-        self.display_dimming_timeout = display_dimming_timeout
         self.test_mode = test_mode
 
         # State management
@@ -60,16 +57,13 @@ class MotionDetectionService:
 
         # Timers
         self.display_timer = None
-        self.dimming_timer = None
 
         # Timer tracking for countdown display
         self.timer_start_time = None
         self.current_timer_duration = None
-        self.timer_type = None  # 'dimming' or 'off'
 
         # Callbacks
         self.on_motion_detected: Optional[Callable] = None
-        self.on_display_dim: Optional[Callable] = None
         self.on_display_off: Optional[Callable] = None
         self.on_display_active: Optional[Callable] = None
         self.on_countdown_update: Optional[Callable] = None
@@ -85,7 +79,6 @@ class MotionDetectionService:
         print(f"🔍 MotionDetectionService initialized:")
         print(f"   Pin: {self.motion_sensor_pin}")
         print(f"   Display timeout: {self.display_timeout}s")
-        print(f"   Dimming timeout: {self.display_dimming_timeout}s")
         print(f"   Test mode: {self.test_mode}")
         print(f"   GPIO available: {self.gpio_available}")
 
@@ -181,10 +174,6 @@ class MotionDetectionService:
         """Set callback for when motion is detected"""
         self.on_motion_detected = callback
 
-    def set_display_dim_callback(self, callback: Callable):
-        """Set callback for when display should dim"""
-        self.on_display_dim = callback
-
     def set_display_off_callback(self, callback: Callable):
         """Set callback for when display should turn off"""
         self.on_display_off = callback
@@ -210,14 +199,10 @@ class MotionDetectionService:
             self.on_motion_detected()
 
     def reset_dimming_timer(self):
-        """Reset the dimming timer (called on mouse movement or touch)"""
-        print("🔄 Resetting dimming timer due to user interaction")
+        """Reset the display timer (called on motion detection or user interaction)"""
+        print("🔄 Resetting display timer due to user interaction")
         if self.current_state == DisplayState.ACTIVE:
             # Only reset if we're in active state
-            self.start_display_timer()
-        elif self.current_state == DisplayState.DIMMED:
-            # If dimmed, go back to active and restart timer
-            self._set_display_state(DisplayState.ACTIVE)
             self.start_display_timer()
         elif self.current_state == DisplayState.OFF:
             # If off, turn back on and restart timer
@@ -234,7 +219,6 @@ class MotionDetectionService:
 
         return {
             'remaining_seconds': int(remaining),
-            'timer_type': self.timer_type,
             'is_active': remaining > 0
         }
 
@@ -249,9 +233,8 @@ class MotionDetectionService:
         # Track timer information for countdown display
         self.timer_start_time = time.time()
         self.current_timer_duration = self.display_timeout
-        self.timer_type = 'dimming'
 
-        # Start timer for dimming
+        # Start timer for turning off display
         self.display_timer = threading.Timer(
             self.display_timeout,
             self._on_display_timeout
@@ -259,31 +242,11 @@ class MotionDetectionService:
         self.display_timer.start()
 
         print(
-            f"⏰ Display timer started ({self.display_timeout}s until dimming)")
+            f"⏰ Display timer started ({self.display_timeout}s until display off)")
 
     def _on_display_timeout(self):
         """Called when display timeout is reached"""
-        print("⏰ Display timeout reached - dimming display")
-        self._set_display_state(DisplayState.DIMMED)
-
-        # Track timer information for countdown display
-        self.timer_start_time = time.time()
-        self.current_timer_duration = self.display_dimming_timeout
-        self.timer_type = 'off'
-
-        # Start timer for turning off
-        self.dimming_timer = threading.Timer(
-            self.display_dimming_timeout,
-            self._on_dimming_timeout
-        )
-        self.dimming_timer.start()
-
-        print(
-            f"⏰ Dimming timer started ({self.display_dimming_timeout}s until off)")
-
-    def _on_dimming_timeout(self):
-        """Called when dimming timeout is reached"""
-        print("⏰ Dimming timeout reached - turning off display")
+        print("⏰ Display timeout reached - turning off display")
         self._set_display_state(DisplayState.OFF)
 
     def _set_display_state(self, new_state: DisplayState):
@@ -299,8 +262,6 @@ class MotionDetectionService:
         # Trigger appropriate callback
         if new_state == DisplayState.ACTIVE and self.on_display_active:
             self.on_display_active()
-        elif new_state == DisplayState.DIMMED and self.on_display_dim:
-            self.on_display_dim()
         elif new_state == DisplayState.OFF and self.on_display_off:
             self.on_display_off()
 
@@ -310,14 +271,9 @@ class MotionDetectionService:
             self.display_timer.cancel()
             self.display_timer = None
 
-        if self.dimming_timer:
-            self.dimming_timer.cancel()
-            self.dimming_timer = None
-
         # Clear countdown tracking
         self.timer_start_time = None
         self.current_timer_duration = None
-        self.timer_type = None
 
     def get_current_state(self) -> DisplayState:
         """Get the current display state"""
@@ -326,10 +282,6 @@ class MotionDetectionService:
     def is_display_active(self) -> bool:
         """Check if display is currently active"""
         return self.current_state == DisplayState.ACTIVE
-
-    def is_display_dimmed(self) -> bool:
-        """Check if display is currently dimmed"""
-        return self.current_state == DisplayState.DIMMED
 
     def is_display_off(self) -> bool:
         """Check if display is currently off"""
